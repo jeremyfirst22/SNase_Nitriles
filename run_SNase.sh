@@ -45,7 +45,7 @@ check(){
 }
 
 clean(){
-    if [ -d oplsaa.ff ] ; then rm -r oplsaa.ff *.dat ; fi  
+    if [ -d $forceField.ff ] ; then rm -r $forceField.ff *.dat ; fi  
 }
 
 create_dir(){
@@ -74,22 +74,16 @@ protein_steep(){
         cp $MOLEC.pdb Protein_steep/.
         cd Protein_steep
 
-        ## 3, 3 -- None, None for termini options
-        echo '3 3' | gmx pdb2gmx -f $MOLEC.pdb \
+        gmx pdb2gmx -f $MOLEC.pdb \
             -p $MOLEC.top \
             -ff $forceField \
-            -ter \
             -water tip3p \
             -o $MOLEC.gro >> $logFile 2>> $errFile 
         check $MOLEC.gro 
 
-        xdim=$dim
-        ydim=$dim
-        zdim=$dim
-            #-d 1.0 \   ## Box size is bigger than -d 1.0 nm, and consistent with sam_box.
         echo 'Backbone' | gmx editconf -f $MOLEC.gro \
-            -box $xdim $ydim $zdim \
-            -bt tric \
+            -d 1.0 \
+            -bt dodecahedron \
             -o boxed.gro >> $logFile 2>> $errFile
         check boxed.gro 
 
@@ -120,7 +114,6 @@ solvate(){
         cd Solvate
 
         gmx solvate -cp protein_steep.gro \
-            -box $dim $dim $dim \
             -p $MOLEC.top \
             -o solvated.gro >> $logFile 2>> $errFile 
         check solvated.gro
@@ -138,12 +131,10 @@ solvate(){
             -o neutral.gro >> $logFile 2>> $errFile 
         check neutral.gro 
 
-        ## 3, 3 -- None, None for terimini options
-        echo '3 3' | gmx pdb2gmx -f neutral.gro \
-            -ff oplsaa \
+        gmx pdb2gmx -f neutral.gro \
+            -ff $forceField \
             -water tip3p \
             -p neutral.top \
-            -ter \
             -o neutral.gro >> $logFile 2>> $errFile 
         check neutral.top 
 
@@ -210,7 +201,7 @@ solvent_nvt(){
 }
 
 solvent_npt(){
-    printf "\t\tSolvent NPT isotropic relaxation.........." 
+    printf "\t\tSolvent NPT relaxation...................." 
     if [ ! -f Solvent_npt/solvent_npt.gro ] ; then 
         create_dir Solvent_npt
         
@@ -219,7 +210,7 @@ solvent_npt(){
         cp Solvent_nvt/*.itp Solvent_npt/. 
         cd Solvent_npt
 
-        gmx grompp -f $MDP/solvent_isotropic_npt_relax.mdp \
+        gmx grompp -f $MDP/solvent_npt_relax.mdp \
             -c solvent_nvt.gro \
             -p neutral.top \
             -o solvent_npt.tpr >> $logFile 2>> $errFile 
@@ -239,22 +230,6 @@ solvent_npt(){
 production(){
     printf "\t\tProduction run............................" 
     if [ ! -f Production/$MOLEC.nopbc.gro ] ; then 
-#            CA1=$(grep " CA " $MOLEC.npt_relax.gro | grep "GLY" | awk '{print $3}' | head -n1) 
-#            CA2=$(grep " CA " $MOLEC.npt_relax.gro | grep "GLY" | awk '{print $3}' | tail -n1) 
-#            if [[ -z $CA1 || -z $CA2 ]] ; then echo "ERROR: Failed to find CA1 or CA2" ; exit ; fi 
-
-#            echo "[ bonds ]" > distance_restraints.itp 
-#            printf ";%6s%6s%6s%8s%8s%8s%12s\n" ai aj func b0 kb >> distance_restraints.itp 
-#            printf "%6s%6s%6s%8s%8s%8s%12s\n" $CA1 $CA2 6 1.8 1000 >> distance_restraints.itp 
-
-#            if ! grep -sq "distance_restraints.itp" $MOLEC.restraint.top ; then 
-#                awk -v molec=$MOLEC '/.neutral_Protein.itp\"/{print;print"#include \"distance_restraints.itp\" ";next}1' $MOLEC.neutral.top > $MOLEC.restraint.top 
-#                fi 
-
-#            if ! grep -sq "distance_restraints.itp" $MOLEC.restraint.top ; then 
-#                echo "ERROR: distance restraint not added to topology." 
-#                exit 
-#                fi 
         create_dir Production
         
         cp Solvent_npt/neutral.top Production/.
@@ -264,7 +239,7 @@ production(){
 
         if [ ! -f $MOLEC.gro ] ; then 
             if [ ! -f $MOLEC.tpr ] ; then 
-                gmx grompp -f $MDP/production_sam.mdp \
+                gmx grompp -f $MDP/production.mdp \
                     -p neutral.top \
                     -c solvent_npt.gro \
                     -o $MOLEC.tpr >> $logFile 2>> $errFile 
@@ -283,7 +258,7 @@ production(){
             echo 'Protein System' | gmx trjconv -f $MOLEC.xtc \
                 -center \
                 -s $MOLEC.tpr \
-                -ur rect \
+                -ur compact \
                 -pbc mol \
                 -o $MOLEC.nopbc.xtc >> $logFile 2>> $errFile 
             fi 
@@ -293,7 +268,7 @@ production(){
             echo 'Protein System' | gmx trjconv -f $MOLEC.gro \
                 -center \
                 -s $MOLEC.tpr \
-                -ur rect \
+                -ur compact \
                 -pbc mol \
                 -o $MOLEC.nopbc.gro >> $logFile 2>> $errFile 
             fi 
