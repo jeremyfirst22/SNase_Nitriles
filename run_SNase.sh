@@ -22,449 +22,299 @@ else
     exit 
     fi 
 if [ ! -d $MOLEC ] ; then mkdir $MOLEC ; fi 
-if [ ! -f $MOLEC/$fileName ] ; then cp $fileName $MOLEC/ ; fi 
+if [ ! -f $MOLEC/$fileName ] ; then cp $fileName $MOLEC/. ; fi 
 
 TOP=${PWD}
 MDP=$TOP/mdp_files
 logFile=$TOP/$MOLEC/$MOLEC.log 
 errFile=$TOP/$MOLEC/$MOLEC.err 
 FF=$TOP/GMXFF
-FORCE_TOOLS=/Users/jeremyfirst/force_calc_tools
+forceField=amber03
+if [ ! -d $FF/$forceField.ff ] ; then 
+    echo ; echo "ERROR: FF not found" 
+    exit
+    fi  
 
 check(){
-   for var in $@ ; do 
-        if [ ! -s $var ] ; then 
-            echo ; echo $var missing, exitting... 
-            exit 
-            fi 
-        done 
+    for arg in $@ ; do  
+         if [ ! -s $arg ] ; then 
+             echo ; echo "ERROR: $arg missing. Exitting" 
+             exit 
+             fi  
+         done 
 }
 
 clean(){
-    if [ -d amber03.ff ] ; then rm -r amber03.ff *.dat ; fi 
+    if [ -d oplsaa.ff ] ; then rm -r oplsaa.ff *.dat ; fi  
 }
 
 create_dir(){
     if [ -z $1 ] ; then 
-        echo "ERROR: create_dir requires argument. " ; exit ; fi 
+        echo "ERROR: create_dir requires argument. " ; exit ; fi  
 
     dirName=$1 
-    if [ ! -d $dirName ] ; then mkdir $dirName ; fi 
-    
-    if [ ! -d $dirName/amber03.ff ] ; then 
-        if [ -d $FF/amber03.ff ] ; then 
-            cp -r $FF/amber03.ff $dirName/amber03.ff 
+    if [ ! -d $dirName ] ; then mkdir $dirName ; fi  
+                                                        
+    if [ ! -d $dirName/$forceField.ff ] ; then 
+        if [ -d $FF/$forceField.ff ] ; then 
+            cp -r $FF/$forceField.ff $dirName
             cp $FF/*.dat $dirName/. 
         else 
-            echo "FF not found. Standard ff not yet combined with CRO augmented force field." 
+            echo "FF not found" 
             exit 
-            fi 
-        fi 
+            fi  
+        fi  
 }
 
-protein_min(){
-    printf "\t\tProtein STEEP................." 
-    if [ ! -f Protein_min/$MOLEC.solute_min.gro ] ; then 
-        create_dir Protein_min
-
-        cp $MOLEC.pdb Protein_min
-        cd Protein_min
+protein_steep(){
+    printf "\t\tProtein steep............................." 
+    if [ ! -f Protein_steep/protein_steep.gro ] ; then 
+        create_dir Protein_steep
         
-        #Reads protein .pdb file as input and outputs .pdb as gromacs file and topology file
-        #Applies force field amber03 and uses tip3p water molecule
-        gmx pdb2gmx -f $MOLEC.pdb -o $MOLEC.gro -p $MOLEC.top -ff amber03 -water tip3p >> $logFile 2>> $errFile
-        check $MOLEC.top $MOLEC.gro 
-        
-        #Reads input with MD parameters, gromacs file, and topology file and creates binary file to speed computation process.
-        gmx grompp -f $MDP/solute_steep.mdp -c $MOLEC.gro -p $MOLEC.top -o $MOLEC.solute_min.tpr >> $logFile 2>> $errFile
-        check $MOLEC.solute_min.tpr 
+        cp $MOLEC.pdb Protein_steep/.
+        cd Protein_steep
 
-        #Runs molecular dynamics simulation 
-        gmx mdrun -deffnm $MOLEC.solute_min >> $logFile 2>> $errFile
-        check $MOLEC.solute_min.gro 
-        
-        #Converts minimized .gro file to minimized .pdb file
-        gmx editconf -f $MOLEC.solute_min.gro -o $MOLEC.min.pdb >> $logFile 2>> $errFile
-        check $MOLEC.min.pdb 
-        cp $MOLEC.min.pdb ../
+        ## 3, 3 -- None, None for termini options
+        echo '3 3' | gmx pdb2gmx -f $MOLEC.pdb \
+            -p $MOLEC.top \
+            -ff $forceField \
+            -ter \
+            -water tip3p \
+            -o $MOLEC.gro >> $logFile 2>> $errFile 
+        check $MOLEC.gro 
 
-        clean
-        printf "Success\n" 
-        cd ../
+        xdim=$dim
+        ydim=$dim
+        zdim=$dim
+            #-d 1.0 \   ## Box size is bigger than -d 1.0 nm, and consistent with sam_box.
+        echo 'Backbone' | gmx editconf -f $MOLEC.gro \
+            -box $xdim $ydim $zdim \
+            -bt tric \
+            -o boxed.gro >> $logFile 2>> $errFile
+        check boxed.gro 
 
-    else 
-        printf "Skipped\n" 
-        fi 
-    check Protein_min/$MOLEC.solute_min.gro 
-}
+        gmx grompp -f $MDP/protein_steep.mdp \
+            -c boxed.gro \
+            -p $MOLEC.top \
+            -o protein_steep.tpr >> $logFile 2>> $errFile 
+        check protein_steep.tpr 
 
-solvate(){
-    printf "\t\tSolvating....................." 
-    if [ ! -f Solvate/$MOLEC.neutral.gro ] ; then 
-        create_dir Solvate
+        gmx mdrun -deffnm protein_steep >> $logFile 2>> $errFile 
+        check protein_steep.gro 
 
-        cp Protein_min/$MOLEC.solute_min.gro Solvate
-        cd Solvate
-        # Generate a topology from $MOLEC.solute_min.gro with Amber03 force field and tip3p water molecule
-        gmx pdb2gmx -f $MOLEC.solute_min.gro -o $MOLEC.gro -p $MOLEC.top -water tip3p -ff amber03 >> $logFile 2>> $errFile 
-        check $MOLEC.gro $MOLEC.top 
-        
-        #Uses octahedron box for solvation and centers molecule
-        gmx editconf -f $MOLEC.gro -bt octahedron -box 8 -o temp.centered.gro >> $logFile 2>> $errFile 
-        check temp.centered.gro 
-        
-        #Solvates the molecule with octahedron
-        gmx solvate -cp temp.centered.gro -o temp.solvated.gro >> $logFile 2>> $errFile  
-        check temp.solvated.gro 
-        
-        #Generate topology from temp using water tip3p and Amber03s
-        gmx pdb2gmx -f temp.solvated.gro -water tip3p -ff amber03 -o temp.$MOLEC.solvated.gro -p temp.$MOLEC.solvated.top >> $logFile 2>> $errFile 
-        check temp.$MOLEC.solvated.gro temp.$MOLEC.solvated.top
-
-        #Creates binary file for MD
-        gmx grompp -f $MDP/vac_md.mdp -p temp.$MOLEC.solvated.top -c temp.$MOLEC.solvated.gro -o temp.genion.tpr >> $logFile 2>> $errFile 
-        check temp.genion.tpr
-
-        #Randomly replaces solvent ions with Cl- and Na+ to neutralize system
-        echo SOL | gmx genion -s temp.genion.tpr -neutral -nname 'CL' -pname 'NA' -o temp.neutral.gro >> $logFile 2>> $errFile 
-        check temp.neutral.gro 
-
-        #Generate topology of netural molecule
-        gmx pdb2gmx -f temp.neutral.gro -water tip3p -ff amber03 -p $MOLEC.neutral.top -o $MOLEC.neutral.gro >> $logFile 2>> $errFile 
-        check $MOLEC.neutral.gro 
-
-        clean
-        printf "Success\n" 
-        cd ../
-
-   else 
-       printf "Skipped\n"      
-       fi 
-   check Solvate/$MOLEC.neutral.gro Solvate/$MOLEC.neutral.top 
-}
-
-solvent_min(){
-    printf "\t\tSolvent minimization.........." 
-    if [ ! -f Solvent_min/$MOLEC.npt_relax.gro ] ; then 
-        create_dir Solvent_min
-
-        cp Solvate/$MOLEC.neutral.gro Solvent_min
-        cp Solvate/$MOLEC.neutral.top Solvent_min
-        cp Solvate/*.itp Solvent_min
-        cd Solvent_min
-        if [ ! -f $MOLEC.minimize.gro ] ; then
-            #Creates binary file for MD 
-            gmx grompp -f $MDP/solvent_min.mdp -c $MOLEC.neutral.gro -p $MOLEC.neutral.top -o $MOLEC.minimize.tpr >> $logFile 2>> $errFile 
-            check $MOLEC.minimize.tpr
-
-            #Runs MD simulation
-            gmx mdrun -deffnm $MOLEC.minimize >> $logFile 2>> $errFile 
-            check $MOLEC.minimize.gro
-            fi 
-        if [ ! -f $MOLEC.nvt_relax.gro ] ; then 
-            #constant volume, temperature, protein is frozen
-            gmx grompp -f $MDP/solvent_nvt_relax.mdp -c $MOLEC.minimize.gro -p $MOLEC.neutral.top -o $MOLEC.nvt_relax.tpr >> $logFile 2>> $errFile 
-            check $MOLEC.nvt_relax.tpr
-            
-            gmx mdrun -deffnm $MOLEC.nvt_relax >> $logFile 2>> $errFile 
-            check $MOLEC.nvt_relax.gro 
-            fi 
-
-        if [ ! -f $MOLEC.npt_relax.gro ] ; then
-             #constant pressure and temperature 
-            gmx grompp -f $MDP/solvent_npt_relax.mdp -c $MOLEC.nvt_relax.gro -p $MOLEC.neutral.top -o $MOLEC.npt_relax.tpr >> $logFile 2>> $errFile 
-            check $MOLEC.npt_relax.tpr 
-
-            gmx mdrun -deffnm $MOLEC.npt_relax >> $logFile 2>> $errFile 
-            check $MOLEC.npt_relax.gro 
-            fi 
-
-        clean
-        printf "Success\n" 
-        cd ../
-    else 
-        printf "Skipped\n" 
-        fi 
-    check Solvent_min/$MOLEC.npt_relax.gro Solvent_min/$MOLEC.neutral.top 
-} 
-
-production_run(){
-    printf "\t\tProduction run ..............." 
-    if [ ! -f Production/$MOLEC.production.nopbc.gro ] ; then 
-        create_dir Production
-        cp Solvent_min/$MOLEC.npt_relax.gro Production
-        cp Solvent_min/$MOLEC.neutral.top Production
-        cp Solvent_min/*.itp Production
-        cd Production
-        
-        if [ ! -f $MOLEC.production.gro ] ; then 
-            if [ ! -f $MOLEC.production.tpr ] ; then 
-                gmx grompp -f $MDP/production_gfp.mdp -o $MOLEC.production.tpr -p $MOLEC.neutral.top -c $MOLEC.npt_relax.gro >> $logFile 2>> $errFile 
-                fi 
-            check $MOLEC.production.tpr 
-            if [ -f $MOLEC.production.cpt ] ; then 
-                gmx mdrun -deffnm $MOLEC.production -cpi $MOLEC.production.cpt >> $logFile 2>> $errFile 
-            else 
-                gmx mdrun -deffnm $MOLEC.production >> $logFile 2>> $errFile 
-                fi 
-            fi 
-        check $MOLEC.production.gro 
-        
-        if [ ! -f $MOLEC.production.nopbc.gro ] ; then 
-            echo '1 0' | gmx trjconv -f $MOLEC.production.xtc -s $MOLEC.production.tpr -pbc mol -ur compact -center -o $MOLEC.production.nopbc.xtc >> $logFile 2>> $errFile 
-            echo '1 0' | gmx trjconv -f $MOLEC.production.gro -s $MOLEC.production.tpr -pbc mol -ur compact -center -o $MOLEC.production.nopbc.gro >> $logFile 2>> $errFile 
-            fi 
-        check $MOLEC.production.nopbc.gro 
-
-        clean
-        printf "Success\n" 
-        cd ../
-    else 
-        printf "Skipped\n" 
-        fi 
-}
-
-analyze_hbond(){
-    printf "\t\tAnalyzing Hbond content ......" 
-    create_dir HBond
-    cd HBond
-    
-    if grep -sq CNF ../Production/$MOLEC.production.nopbc.gro ; then 
-        if [ ! -f cnf_num.xvg ] ; then 
-            echo "r CNF & a NH" > selection.dat 
-            echo "q" >> selection.dat 
-            cat selection.dat | gmx make_ndx -f ../Production/$MOLEC.production.gro -o cnf_nh.ndx >> $logFile 2>> $errFile 
-            check cnf_nh.ndx 
-
-            echo '18 14 18' | gmx hbond -f ../Production/$MOLEC.production.xtc -s ../Production/$MOLEC.production.tpr -n cnf_nh.ndx -shell 1 -r 0.3 -a 20 -num cnf_num.xvg >> $logFile 2>> $errFile 
-            fi 
-        check cnf_num.xvg 
-        fi 
-        
-    if [ ! -f cro_num.xvg ] ; then 
-        echo "r CROn & a OH or a HO" > selection.dat 
-        echo "r CROn & a OH" >> selection.dat
-        echo "q" >> selection.dat 
-        cat selection.dat | gmx make_ndx -f ../Production/$MOLEC.production.gro -o cro_o_h.ndx >> $logFile 2>> $errFile
-        check cro_o_h.ndx
-
-        echo '18 14 19' | gmx hbond -f ../Production/$MOLEC.production.xtc -s ../Production/$MOLEC.production.tpr -n cro_o_h.ndx -shell 1 -r 0.3 -a 20 -num cro_num.xvg >> $logFile 2>> $errFile 
-        fi 
-    check cro_num.xvg
-
-    clean
-    printf "Success\n" 
-    cd ../
-} 
-
-analyze_hbond_nit(){
-    printf "\t\tAnaylzing HBond_nit content..."
-    if [ ! -s HBond_nit/$MOLEC.hb_count.xvg ] ; then 
-        create_dir HBond_nit
-        cd HBond_nit
-
-    if [ ! -d ../Production/amber03.ff ] ; then 
-        cp $FF/*.dat ../Production/. 
-        cp -r $FF/amber03.ff ../Production/.
-        fi 
-    check ../Production/amber03.ff/forcefield.itp 
-
-        ## We use veriosn 4.6 of Gromacs for this grompp command, because g_insert_dummy is written for version 4.6
-        ## We allow for warnings, since we are generated .tpr from a gromacs 5 mdp file. We are only inserting
-        ## atoms this should not matter. 
-        if [ ! -f $MOLEC.production.v4.tpr ] ; then 
-            grompp -f $MDP/production_gfp.mdp -o $MOLEC.production.v4.tpr -p ../Production/$MOLEC.neutral.top -c ../Production/$MOLEC.npt_relax.gro -maxwarn 3 >> $logFile 2>> $errFile 
-            fi
-        check $MOLEC.production.v4.tpr 
-    
-        CT=`grep CNF ../Production/$MOLEC.production.nopbc.gro | grep CT | awk '{print $3}'`
-        NH=`grep CNF ../Production/$MOLEC.production.nopbc.gro | grep NH | awk '{print $3}'`
-        #echo $CT $NH
-        
-        if [ ! -s $MOLEC.hb_count.xvg ] ; then  
-            $HOME/andrews_gmx/g_nitrile_hbond/g_nitrile_hbond \
-                -s $MOLEC.production.v4.tpr \
-                -f ../Production/$MOLEC.production.nopbc.xtc \
-                -a1 $CT -a2 $NH \
-                -select "resname SOL and same residue as within 0.5 of resname CNF and name NH" \
-                -o $MOLEC.frame_hb.xvg -op $MOLEC.persistent.xvg \
-                -oa $MOLEC.hb_count.xvg -or $MOLEC.geometry.xvg  >> $logFile 2>> $errFile
-            check $MOLEC.hb_count.xvg $MOLEC.geometry.xvg $MOLEC.persistent.xvg $MOLEC.frame_hb.xvg 
-        fi 
-        
-        check $MOLEC.hb_count.xvg 
-        printf "Success\n" 
-        cd ../
-    else 
-        printf "Skipped\n" 
-        fi 
-    check HBond_nit/$MOLEC.hb_count.xvg 
-}
-
-force_calc(){
-    printf "\n\t\tCalculating force:\n" 
-    if [[ ! -f force_calc/$MOLEC.solvent_rxn_field.projected.xvg || ! -f force_calc/$MOLEC.external_field.projected.xvg || ! -f force_calc/$MOLEC.total_field.xvg ]] ; then 
-
-    if [ ! -f $FORCE_TOOLS/g_insert_dummy_atom ] ; then 
-        printf "\t\t\tERROR: Force tools not found. Skipping force calc\n" 
-        return  
-        fi 
-
-    create_dir force_calc
-    cd force_calc 
-
-    if [ ! -d ../Production/amber03.ff ] ; then 
-        cp $FF/*.dat ../Production/. 
-        cp -r $FF/amber03.ff ../Production/.
-        fi 
-    check ../Production/amber03.ff/forcefield.itp 
-
-    ## We use veriosn 4.6 of Gromacs for this grompp command, because g_insert_dummy is written for version 4.6
-    ## We allow for warnings, since we are generated .tpr from a gromacs 5 mdp file. We are only inserting
-    ## atoms this should not matter. 
-    if [ ! -f $MOLEC.production.v4.tpr ] ; then 
-        grompp -f $MDP/production_gfp.mdp -o $MOLEC.production.v4.tpr -p ../Production/$MOLEC.neutral.top -c ../Production/$MOLEC.npt_relax.gro -maxwarn 3 >> $logFile 2>> $errFile 
-        fi
-    check $MOLEC.production.v4.tpr 
-    
-    CT=`grep CNF ../Production/$MOLEC.production.nopbc.gro | grep CT | awk '{print $3}'`
-    NH=`grep CNF ../Production/$MOLEC.production.nopbc.gro | grep NH | awk '{print $3}'`
-    #echo $CT $NH
-    
-    printf "\t\t\tInserting dummy atoms............................" 
-    if [ ! -s $MOLEC.with_dummy.xtc ] ; then 
-        $FORCE_TOOLS/g_insert_dummy_atom -s $MOLEC.production.v4.tpr -f ../Production/$MOLEC.production.nopbc.xtc -o $MOLEC.with_dummy.xtc -a1 $CT -a2 $NH >> $logFile 2>> $errFile 
-        printf "Done\n" 
-    else 
-        printf "Skipped\n" 
-        fi 
-    check $MOLEC.with_dummy.xtc
-
-    ## We use the initial configuration so that titration states are conserved (ie, at the end of the production run, pdb2gmx might assign a different titration state to a histidine, which causes it to fail. 
-    if [ ! -s $MOLEC.with_dummy.gro ] ; then 
-        echo '1 0' | gmx trjconv -s ../Solvent_min/$MOLEC.minimize.tpr -f ../Solvate/$MOLEC.neutral.gro -center -ur compact -pbc mol -o $MOLEC.nopbc.gro >> $logFile 2>> $errFile 
-        check $MOLEC.nopbc.gro 
-
-        $FORCE_TOOLS/g_insert_dummy_atom -s $MOLEC.production.v4.tpr -f $MOLEC.nopbc.gro -o $MOLEC.with_dummy.gro -a1 $CT -a2 $NH >> $logFile 2>> $errFile 
-        fi 
-    check $MOLEC.with_dummy.gro 
-
-    if [ ! -s $MOLEC.with_dummy.top ] ; then 
-        gmx pdb2gmx -f $MOLEC.with_dummy.gro -p $MOLEC.with_dummy.top -water tip3p -ff amber03 >> $logFile 2>> $errFile 
-        fi 
-    check $MOLEC.with_dummy.top 
-    
-    ##Find new atom numbers 
-    CT=`grep CNF $MOLEC.with_dummy.gro | grep CT | awk '{print $3}'`
-    NH=`grep CNF $MOLEC.with_dummy.gro | grep NH | awk '{print $3}'`
-
-    echo "[ probe ]" > probe.ndx 
-    echo "$CT $NH" >> probe.ndx 
-
-    echo "[ protein ]" > protein.ndx 
-    grep -v TCHG $MOLEC.with_dummy.gro | grep -v SOL | grep -v Na | grep -v Cl | tail -n+3 | sed '$d' | awk '{print $3}' >> protein.ndx 
-
-    cp $MOLEC.with_dummy.top $MOLEC.total_field.top 
-
-    if [ ! -s $MOLEC.solvent_rxn_field.top ] ; then 
-        $FORCE_TOOLS/zero_charges.py $MOLEC.with_dummy.top protein.ndx $MOLEC.solvent_rxn_field.top >> $logFile 2>> $errFile 
-        fi 
-
-    if [ ! -s $MOLEC.external_field.top ] ; then 
-        $FORCE_TOOLS/zero_charges.py $MOLEC.with_dummy.top probe.ndx $MOLEC.external_field.top >> $logFile 2>> $errFile 
-        fi 
-    check $MOLEC.total_field.top $MOLEC.external_field.top $MOLEC.solvent_rxn_field.top 
-
-    for field in total_field external_field solvent_rxn_field ; do 
-        printf "\t\t%20s..." "$field" 
-
-        ##Extract forces 
-        if [ ! -s $MOLEC.$field.projected.xvg ] ; then 
-            printf "forces..." 
-            if [ ! -s $MOLEC.$field.xvg ] ; then 
-                if [ ! -s $MOLEC.$field.tpr ] ; then 
-                    gmx grompp -f $MDP/rerun.mdp -p $MOLEC.$field.top -c $MOLEC.with_dummy.gro -o $MOLEC.$field.tpr  >> $logFile 2>> $errFile 
-                    fi 
-                check $MOLEC.$field.tpr 
- 
-                if [ ! -s $MOLEC.$field.trr ] ; then 
-                    gmx mdrun -rerun $MOLEC.with_dummy.xtc -s $MOLEC.$field.tpr -deffnm $MOLEC.$field >> $logFile 2>> $errFile 
-                    fi 
-                check $MOLEC.$field.trr 
-
-                echo 2 | gmx traj -f $MOLEC.$field.trr -s $MOLEC.$field.tpr -of $MOLEC.$field.xvg -xvg none  >> $logFile 2>> $errFile 
-                rm $MOLEC.$field.trr 
-            fi 
-            check $MOLEC.$field.xvg 
-
-            ##extract postions for bond vector
-            printf "positions..." 
-            if [ ! -s $MOLEC.positions.xvg ] ; then 
-                gmx traj -f $MOLEC.with_dummy.xtc -s $MOLEC.$field.tpr -n probe.ndx -ox $MOLEC.positions.xvg -xvg none  >> $logFile 2>> $errFile 
-                fi 
-            check $MOLEC.positions.xvg 
-
-            ##project force along bond vector 
-            printf "Projecting..." 
-            $FORCE_TOOLS/get_force.py $MOLEC.positions.xvg $MOLEC.$field.xvg $MOLEC.$field.projected.xvg 
-            check $MOLEC.$field.projected.xvg 
-            printf "Done\n"  
-        else 
-            printf "..................................Skipped\n" 
-            fi 
-        done 
-    check $MOLEC.total_field.projected.xvg $MOLEC.external_field.projected.xvg $MOLEC.solvent_rxn_field.projected.xvg 
-    clean 
-    cd ../Production/
-    clean
-    cd ../
-    
-    else 
-        printf "\t\t\t\t  ............Skipped\n" 
-        fi 
-    printf "\n" 
-}
-
-chi1_his148(){
-    printf "\t\tCalculation chi1 of H148......" 
-    if [[ ! -f chi1_his148/$MOLEC.angaver.xvg || ! -f chi1_his148/$MOLEC.angdist.xvg ]] ; then 
-        create_dir chi1_his148 
-        cd chi1_his148 
-    
-        N=`grep " N " ../Production/$MOLEC.production.nopbc.gro | grep " 147HIS" | awk '{print$3}'`
-        CA=`grep " CA" ../Production/$MOLEC.production.nopbc.gro | grep " 147HIS" | awk '{print$3}'`
-        CB=`grep " CB" ../Production/$MOLEC.production.nopbc.gro | grep " 147HIS" | awk '{print$3}'`
-        CG=`grep " CG" ../Production/$MOLEC.production.nopbc.gro | grep " 147HIS" | awk '{print$3}'`
-        echo "[ chi1_his148 ] " > chi1_his148.ndx 
-        echo "$N   $CA   $CB   $CG   " >> chi1_his148.ndx 
-        echo " " >> chi1_his148.ndx 
-        check chi1_his148.ndx 
-
-        gmx angle -f ../Production/$MOLEC.production.nopbc.xtc -type dihedral -n chi1_his148.ndx -od $MOLEC.angdist.xvg -ov $MOLEC.angaver.xvg >> $logFile 2>> $errFile 
-
-        check $MOLEC.angaver.xvg $MOLEC.angdist.xvg
         clean
         printf "Success\n" 
         cd ../
     else
-        printf "Skipped\n" 
-        fi 
+        printf "Skipped\n"
+        fi
 } 
 
-printf "\n\t\t*** Program Beginning $MOLEC***\n\n" 
+solvate(){
+    printf "\t\tSolvating protein........................." 
+    if [ ! -f Solvate/neutral.top ] ; then 
+        create_dir Solvate
+        
+        cp Protein_steep/protein_steep.gro Solvate/. 
+        cp Protein_steep/$MOLEC.top Solvate/. 
+        cd Solvate
+
+        gmx solvate -cp protein_steep.gro \
+            -box $dim $dim $dim \
+            -p $MOLEC.top \
+            -o solvated.gro >> $logFile 2>> $errFile 
+        check solvated.gro
+
+        gmx grompp -f $MDP/vac_md.mdp \
+            -p $MOLEC.top \
+            -c solvated.gro \
+            -o genion.tpr >> $logFile 2>> $errFile 
+        check genion.tpr
+        
+        echo 'SOL' | gmx genion -s genion.tpr \
+            -neutral \
+            -nname 'CL' \
+            -pname 'NA' \
+            -o neutral.gro >> $logFile 2>> $errFile 
+        check neutral.gro 
+
+        ## 3, 3 -- None, None for terimini options
+        echo '3 3' | gmx pdb2gmx -f neutral.gro \
+            -ff oplsaa \
+            -water tip3p \
+            -p neutral.top \
+            -ter \
+            -o neutral.gro >> $logFile 2>> $errFile 
+        check neutral.top 
+
+        clean
+        printf "Success\n" 
+        cd ../
+    else
+        printf "Skipped\n"
+        fi  
+} 
+
+solvent_steep(){
+    printf "\t\tSolvent steep............................." 
+    if [ ! -f Solvent_steep/solvent_steep.gro ] ; then 
+        create_dir Solvent_steep
+        
+        cp Solvate/neutral.gro Solvent_steep/. 
+        cp Solvate/neutral.top Solvent_steep/. 
+        cp Solvate/*.itp Solvent_steep/. 
+        cd Solvent_steep
+
+        gmx grompp -f $MDP/solvent_steep.mdp \
+            -p neutral.top \
+            -c neutral.gro \
+            -o solvent_steep.tpr >> $logFile 2>> $errFile 
+        check solvent_steep.tpr 
+
+        gmx mdrun -deffnm solvent_steep >> $logFile 2>> $errFile 
+        check solvent_steep.gro 
+
+        clean
+        printf "Success\n" 
+        cd ../
+    else
+        printf "Skipped\n"
+        fi  
+}
+
+solvent_nvt(){
+    printf "\t\tSolvent NVT relaxation...................." 
+    if [ ! -f Solvent_nvt/solvent_nvt.gro ] ; then 
+        create_dir Solvent_nvt
+        
+        cp Solvent_steep/solvent_steep.gro Solvent_nvt/. 
+        cp Solvent_steep/neutral.top Solvent_nvt/. 
+        cp Solvent_steep/*.itp Solvent_nvt/. 
+        cd Solvent_nvt
+
+        gmx grompp -f $MDP/solvent_nvt_relax.mdp \
+            -c solvent_steep.gro \
+            -p neutral.top \
+            -o solvent_nvt.tpr >> $logFile 2>> $errFile 
+        check solvent_nvt.tpr 
+
+        gmx mdrun -deffnm solvent_nvt >> $logFile 2>> $errFile 
+        check solvent_nvt.gro 
+
+        clean
+        printf "Success\n" 
+        cd ../
+    else
+        printf "Skipped\n"
+        fi  
+}
+
+solvent_npt(){
+    printf "\t\tSolvent NPT isotropic relaxation.........." 
+    if [ ! -f Solvent_npt/solvent_npt.gro ] ; then 
+        create_dir Solvent_npt
+        
+        cp Solvent_nvt/solvent_nvt.gro Solvent_npt/. 
+        cp Solvent_nvt/neutral.top Solvent_npt/. 
+        cp Solvent_nvt/*.itp Solvent_npt/. 
+        cd Solvent_npt
+
+        gmx grompp -f $MDP/solvent_isotropic_npt_relax.mdp \
+            -c solvent_nvt.gro \
+            -p neutral.top \
+            -o solvent_npt.tpr >> $logFile 2>> $errFile 
+        check solvent_npt.tpr 
+
+        gmx mdrun -deffnm solvent_npt >> $logFile 2>> $errFile 
+        check solvent_npt.gro 
+
+        clean
+        printf "Success\n" 
+        cd ../
+    else
+        printf "Skipped\n"
+        fi  
+}
+
+production(){
+    printf "\t\tProduction run............................" 
+    if [ ! -f Production/$MOLEC.nopbc.gro ] ; then 
+#            CA1=$(grep " CA " $MOLEC.npt_relax.gro | grep "GLY" | awk '{print $3}' | head -n1) 
+#            CA2=$(grep " CA " $MOLEC.npt_relax.gro | grep "GLY" | awk '{print $3}' | tail -n1) 
+#            if [[ -z $CA1 || -z $CA2 ]] ; then echo "ERROR: Failed to find CA1 or CA2" ; exit ; fi 
+
+#            echo "[ bonds ]" > distance_restraints.itp 
+#            printf ";%6s%6s%6s%8s%8s%8s%12s\n" ai aj func b0 kb >> distance_restraints.itp 
+#            printf "%6s%6s%6s%8s%8s%8s%12s\n" $CA1 $CA2 6 1.8 1000 >> distance_restraints.itp 
+
+#            if ! grep -sq "distance_restraints.itp" $MOLEC.restraint.top ; then 
+#                awk -v molec=$MOLEC '/.neutral_Protein.itp\"/{print;print"#include \"distance_restraints.itp\" ";next}1' $MOLEC.neutral.top > $MOLEC.restraint.top 
+#                fi 
+
+#            if ! grep -sq "distance_restraints.itp" $MOLEC.restraint.top ; then 
+#                echo "ERROR: distance restraint not added to topology." 
+#                exit 
+#                fi 
+        create_dir Production
+        
+        cp Solvent_npt/neutral.top Production/.
+        cp Solvent_npt/solvent_npt.gro Production/.
+        cp Solvent_npt/*.itp Production/. 
+        cd Production
+
+        if [ ! -f $MOLEC.gro ] ; then 
+            if [ ! -f $MOLEC.tpr ] ; then 
+                gmx grompp -f $MDP/production_sam.mdp \
+                    -p neutral.top \
+                    -c solvent_npt.gro \
+                    -o $MOLEC.tpr >> $logFile 2>> $errFile 
+                fi 
+                check $MOLEC.tpr 
+
+            if [ -f $MOLEC.cpt ] ; then 
+                gmx mdrun -deffnm $MOLEC -cpi $MOLEC.cpt >> $logFile 2>> $errFile  
+            else 
+                gmx mdrun -deffnm $MOLEC >> $logFile 2>> $errFile 
+                fi 
+            fi 
+        check $MOLEC.gro 
+
+        if [ ! -f $MOLEC.nopbc.xtc ] ; then 
+            echo 'Protein System' | gmx trjconv -f $MOLEC.xtc \
+                -center \
+                -s $MOLEC.tpr \
+                -ur rect \
+                -pbc mol \
+                -o $MOLEC.nopbc.xtc >> $logFile 2>> $errFile 
+            fi 
+        check $MOLEC.nopbc.xtc 
+
+        if [ ! -f $MOLEC.nopbc.gro ] ; then 
+            echo 'Protein System' | gmx trjconv -f $MOLEC.gro \
+                -center \
+                -s $MOLEC.tpr \
+                -ur rect \
+                -pbc mol \
+                -o $MOLEC.nopbc.gro >> $logFile 2>> $errFile 
+            fi 
+        check $MOLEC.nopbc.gro 
+
+        clean
+        printf "Success\n" 
+        cd ../
+    else
+        printf "Skipped\n"
+        fi  
+} 
+
+printf "\n\t\t*** Program Beginning ***\n\n" 
 cd $MOLEC
-protein_min
+protein_steep
 solvate
-solvent_min
-production_run 
-#if grep -sq CNF Production/$MOLEC.production.nopbc.gro ; then 
-#    force_calc
-#    analyze_hbond_nit
-#    fi 
-#analyze_hbond
-#chi1_his148
-#chi1_cnf
-#sasa_cro
+solvent_steep
+solvent_nvt
+solvent_npt
+production 
 cd ../
 
-printf "\n\n\t\t*** Program Ending  $MOLEC***\n\n" 
+printf "\n\n\t\t*** Program Ending    ***\n\n" 
