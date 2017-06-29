@@ -375,7 +375,39 @@ minimage(){
     else
         printf "Skipped\n"
         fi  
-    } 
+} 
+
+rmsd(){
+    printf "\t\tCalculating RMSD.........................." 
+    if [ ! -f rmsd/without_ter.xvg ] ; then 
+        create_dir rmsd
+        cd rmsd
+        clean 
+
+        echo 'Backbone Backbone' | gmx rms -f ../Production/$MOLEC.xtc \
+            -s ../Production/$MOLEC.tpr \
+            -o backbone.xvg >> $logFile 2>> $errFile 
+        check backbone.xvg 
+
+        echo '"Backbone" & ri 6-130' > selection.dat 
+        echo "q" >> selection.dat 
+
+        cat selection.dat | gmx make_ndx -f ../Production/solvent_npt.gro \
+            -o index.ndx >> $logFile 2>> $errFile 
+        check index.ndx 
+        
+        echo "Backbone_&_r_6_130 Backbone_&_r_6_130" | gmx rms -f ../Production/$MOLEC.xtc \
+            -s ../Production/$MOLEC.tpr \
+            -n index.ndx \
+            -o without_ter.xvg >> $logFile 2>> $errFile 
+        check without_ter.xvg
+
+        printf "Success\n" 
+        cd ../ 
+    else
+        printf "Skipped\n"
+        fi  
+}
 
 printf "\n\t\t*** Program Beginning ***\n\n" 
 cd $MOLEC
