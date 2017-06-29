@@ -285,6 +285,78 @@ production(){
         fi  
 } 
 
+hbond(){
+    printf "\t\tAnalyzing hydrogen bonds.................." 
+    if [ ! -f hbond/all_hbnum.xvg ] ; then 
+        create_dir hbond
+        cp Production/solvent_npt.gro hbond/. 
+        cp Production/neutral.top hbond/. 
+        cp Production/*.itp hbond/. 
+        cd hbond
+        
+        ##Version 4 tpr required for Andrew's nitrile code
+        grompp -f $MDP/vac_md.mdp \
+            -c solvent_npt.gro \
+            -p neutral.top \
+            -maxwarn 3 \
+            -o v4.tpr >> $logFile 2>> $errFile 
+        check v4.tpr 
+
+        CD=`grep CNC solvent_npt.gro | grep CD | awk '{print $3}'`
+        NE=`grep CNC solvent_npt.gro | grep NE | awk '{print $3}'`
+        ~/andrews_gmx/g_nitrile_hbond/g_nitrile_hbond -f ../Production/$MOLEC.xtc \
+            -s v4.tpr \
+            -select 'resname SOL and same residue as within 0.5 of resname CNC and name NE' \
+            -a1 $CD \
+            -a2 $NE \
+            -op persistent.xvg \
+            -or geometry.xvg \
+            -o frame_hb.xvg >> $logFile 2>> $errFile 
+        check frame_hb.xvg geometry.xvg persistent.xvg 
+
+        clean
+        rm solvent_npt.gro neutral.top *.itp 
+   
+        echo "r CNC & a NE" > selection.dat 
+        echo "r SOL" >> selection.dat 
+        echo "!r CNC" >> selection.dat  
+        echo "q" >> selection.dat  
+
+        touch empty.ndx 
+        cat selection.dat | gmx make_ndx -f ../Production/solvent_npt.gro \
+            -n empty.ndx \
+            -o index.ndx >> $logFile 2>> $errFile 
+        check index.ndx 
+
+        echo '0 1 0' | gmx hbond -f ../Production/$MOLEC.xtc \
+            -s ../Production/$MOLEC.tpr \
+            -n index.ndx \
+            -shell 1.0 \
+            -ac wat_hbac.xvg \
+            -dist wat_hbdist.xvg \
+            -ang wat_hbang.xvg \
+            -life wat_hblife.xvg \
+            -num wat_hbnum.xvg >> $logFile 2>> $errFile 
+        check wat_hbnum.xvg 
+
+        echo '0 2 0' | gmx hbond -f ../Production/$MOLEC.xtc \
+            -s ../Production/$MOLEC.tpr \
+            -n index.ndx \
+            -shell 1.0 \
+            -ac all_hbac.xvg \
+            -dist all_hbdist.xvg \
+            -ang all_hbang.xvg \
+            -life all_hblife.xvg \
+            -num all_hbnum.xvg >> $logFile 2>> $errFile 
+        check all_hbnum.xvg 
+
+        printf "Success\n" 
+        cd ../
+    else
+        printf "Skipped\n"
+        fi  
+} 
+
 printf "\n\t\t*** Program Beginning ***\n\n" 
 cd $MOLEC
 protein_steep
@@ -292,7 +364,10 @@ solvate
 solvent_steep
 solvent_nvt
 solvent_npt
-production 
+#production 
+if grep -sq CNC $MOLEC.pdb ; then 
+    hbond 
+    fi 
 cd ../
 
 printf "\n\n\t\t*** Program Ending    ***\n\n" 
