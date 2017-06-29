@@ -82,7 +82,7 @@ protein_steep(){
         check $MOLEC.gro 
 
         echo 'Backbone' | gmx editconf -f $MOLEC.gro \
-            -d 1.0 \
+            -d 1.5 \
             -bt dodecahedron \
             -o boxed.gro >> $logFile 2>> $errFile
         check boxed.gro 
@@ -137,6 +137,9 @@ solvate(){
             -p neutral.top \
             -o neutral.gro >> $logFile 2>> $errFile 
         check neutral.top 
+
+        sed 's/POSRES/POSRES_IONS/' neutral_Ion2.itp > temp.itp 
+        mv temp.itp neutral_Ion2.itp 
 
         clean
         printf "Success\n" 
