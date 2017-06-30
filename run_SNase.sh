@@ -111,6 +111,7 @@ solvate(){
         
         cp Protein_steep/protein_steep.gro Solvate/. 
         cp Protein_steep/$MOLEC.top Solvate/. 
+        cp Protein_steep/$MOLEC*.itp Solvate/. 
         cd Solvate
 
         gmx solvate -cp protein_steep.gro \
@@ -156,7 +157,8 @@ solvent_steep(){
         
         cp Solvate/neutral.gro Solvent_steep/. 
         cp Solvate/neutral.top Solvent_steep/. 
-        cp Solvate/*.itp Solvent_steep/. 
+        cp Solvate/neutral*.itp Solvent_steep/. 
+        cp Solvate/posre**.itp Solvent_steep/. 
         cd Solvent_steep
 
         gmx grompp -f $MDP/solvent_steep.mdp \
@@ -409,6 +411,26 @@ rmsd(){
         fi  
 }
 
+chi(){
+    printf "\t\tCalculating phi psi chi dihedrals........." 
+    if [ ! -f chi/order.xvg ] ; then 
+        create_dir chi
+        cd chi
+        clean 
+
+        gmx chi -f ../Production/$MOLEC.xtc \
+            -s ../Production/$MOLEC.tpr \
+            -norad \
+            -rama >> $logFile 2>> $errFile 
+        check order.xvg 
+
+        printf "Success\n" 
+        cd ../ 
+    else
+        printf "Skipped\n"
+        fi  
+} 
+
 printf "\n\t\t*** Program Beginning ***\n\n" 
 cd $MOLEC
 protein_steep
@@ -422,6 +444,7 @@ if grep -sq CNC $MOLEC.pdb ; then
     fi 
 minimage
 rmsd 
+chi
 cd ../
 
 printf "\n\n\t\t*** Program Ending    ***\n\n" 
