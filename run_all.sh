@@ -24,7 +24,7 @@ for molec in $molecList ; do
         echo "#SBATCH -p normal " >> submit_$molec 
         echo "#SBATCH -t 48:00:00" >> submit_$molec 
         echo "#SBATCH -A Ras "  >> submit_$molec
-        echo "#SBATCH --mail-user=bellashah232@gmail.com"  >> submit_$molec
+        echo "#SBATCH --mail-user=Jeremy_first@utexas.edu"  >> submit_$molec
         echo "#SBATCH --mail-type=all"  >> submit_$molec
 
         echo >> submit_$molec
