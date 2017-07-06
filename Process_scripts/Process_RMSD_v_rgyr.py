@@ -56,8 +56,8 @@ for datafile in datafiles :
     while len(x) % binSize != 0 : 
         x = x[:-1]
         y = y[:-1]
-    assert x % binSize == 0 
-    assert y % binSize == 0 
+    assert len(x) % binSize == 0 
+    assert len(y) % binSize == 0 
     
     xs = np.mean(x.reshape(-1,binSize),axis=1) 
     ys = np.mean(y.reshape(-1,binSize),axis=1) 
