@@ -431,6 +431,25 @@ chi(){
         fi  
 } 
 
+rgyr(){
+    printf "\t\tCalculating radius of gyration............" 
+    if [ ! -f rgyr/gyrate.xvg ] ; then 
+        create_dir rgyr
+        cd rgyr
+        clean 
+
+        echo 'Protein' | gmx gyrate -f ../Production/$MOLEC.xtc \
+            -s ../Production/$MOLEC.tpr \
+            -o gyrate.xvg >> $logFile 2>> $errFile 
+        check gyrate.xvg
+
+        printf "Success\n" 
+        cd ../
+    else
+        printf "Skipped\n"
+        fi  
+} 
+
 printf "\n\t\t*** Program Beginning ***\n\n" 
 cd $MOLEC
 protein_steep
@@ -445,6 +464,7 @@ if grep -sq CNC $MOLEC.pdb ; then
 minimage
 rmsd 
 chi
+rgyr
 cd ../
 
 printf "\n\n\t\t*** Program Ending    ***\n\n" 
