@@ -17,7 +17,8 @@ if not os.path.isdir('figures') :
     os.mkdir('figures') 
 
 fig, axarr = plt.subplots(figRows,figCols,sharex='col',sharey='row') 
-fig.subplots_adjust(wspace=10) 
+fig.subplots_adjust(wspace=0.1) 
+fig.subplots_adjust(hspace=0.25) 
 fig.text(0.5,0.04, r"R$_g$ ($\rm{\AA}$)", ha='center', va='center') 
 fig.text(0.05,0.5, r"RMSD ($\rm{\AA}$)", ha='center', va='center',rotation='vertical') 
 
@@ -28,9 +29,9 @@ try :
 except IndexError : 
     print "Usage: %s < binSize >"%(sys.argv[0]) 
     print "Setting binSize to default of 100" 
-    binSize = 100 
+    binSize = 50  
 
-datafiles = glob.glob('*/rgyr/gyrate.xvg') 
+datafiles = glob.glob('*/rgyr/without_ter.xvg') 
 
 index=0
 for datafile in datafiles : 
@@ -76,11 +77,11 @@ for datafile in datafiles :
 
     #ax.set_title(r'${} $'.format(title)) 
     ax.set_title(title) 
-    ax.set_xlim(15,16.50) 
+    ax.set_xlim(13.2,13.9 ) 
     ax.set_ylim(0,2.5) 
 
-    xticks = ax.xaxis.get_major_ticks() 
-    xticks[1].label1.set_visible(False) 
+    #xticks = ax.xaxis.get_major_ticks() 
+    #xticks[1].label1.set_visible(False) 
 
     index +=1
 fig.savefig('figures/rmsd_v_rgyr.png',format='png') 

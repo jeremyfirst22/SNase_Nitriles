@@ -158,7 +158,7 @@ solvent_steep(){
         cp Solvate/neutral.gro Solvent_steep/. 
         cp Solvate/neutral.top Solvent_steep/. 
         cp Solvate/neutral*.itp Solvent_steep/. 
-        cp Solvate/posre**.itp Solvent_steep/. 
+        cp Solvate/posre*.itp Solvent_steep/. 
         cd Solvent_steep
 
         gmx grompp -f $MDP/solvent_steep.mdp \
@@ -438,10 +438,23 @@ rgyr(){
         cd rgyr
         clean 
 
-        echo 'Protein' | gmx gyrate -f ../Production/$MOLEC.xtc \
+        echo 'Backbone' | gmx gyrate -f ../Production/$MOLEC.xtc \
             -s ../Production/$MOLEC.tpr \
-            -o gyrate.xvg >> $logFile 2>> $errFile 
-        check gyrate.xvg
+            -o backbone.xvg >> $logFile 2>> $errFile 
+        check backbone.xvg 
+
+        echo '"Backbone" & ri 6-130' > selection.dat 
+        echo "q" >> selection.dat 
+
+        cat selection.dat | gmx make_ndx -f ../Production/solvent_npt.gro \
+            -o index.ndx >> $logFile 2>> $errFile 
+        check index.ndx 
+        
+        echo "Backbone_&_r_6_130" | gmx gyrate -f ../Production/$MOLEC.xtc \
+            -s ../Production/$MOLEC.tpr \
+            -n index.ndx \
+            -o without_ter.xvg >> $logFile 2>> $errFile 
+        check without_ter.xvg
 
         printf "Success\n" 
         cd ../
@@ -457,7 +470,7 @@ solvate
 solvent_steep
 solvent_nvt
 solvent_npt
-#production 
+production 
 if grep -sq CNC $MOLEC.pdb ; then 
     hbond 
     fi 
