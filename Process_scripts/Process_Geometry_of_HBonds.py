@@ -13,11 +13,18 @@ if not os.path.isdir('figures') :
 datafiles = glob.glob('*/hbond/geometry.xvg') 
 
 fig, axarr = plt.subplots(figRows,figCols,sharex='col',sharey='row') 
-fig.subplots_adjust(wspace=0) 
+fig.subplots_adjust(wspace=0.1) 
+fig.subplots_adjust(hspace=0.25) 
 fig.text(0.5,0.04, "Time (ns)", ha='center', va='center') 
-fig.text(0.08,0.5, "HBond Angle", ha='center', va='center',rotation='vertical') 
+fig.text(0.05,0.5, "HBond Angle", ha='center', va='center',rotation='vertical') 
 
 for index,file in enumerate(datafiles) : 
+    molec = file.split('/')[0]
+    title=molec.split('_')[1]
+    if title[-1] == 'X' : 
+        title = title[:-1]
+        title+='C$_{\\rm{SCN}}$'
+ 
     data = np.genfromtxt(file,skip_header=23) 
     data[:,0] = data[:,0] / 1000 * 4
 
@@ -27,19 +34,27 @@ for index,file in enumerate(datafiles) :
     ax = axarr[index/figCols,index%figCols]
 
     ax.scatter(data[:,0],data[:,3],s=0.1) 
-    ax.set_title(file.split('/')[0]) 
-    ax.set_xlim([-5,55])
+    ax.set_title(title) 
+    ax.set_xlim([0,50])
+    ax.set_ylim([90,190])
 
 fig.savefig('figures/Geometries_angles.png',format='png') 
 plt.close() 
 
 
 fig, axarr = plt.subplots(figRows,figCols,sharex='col',sharey='row') 
-fig.subplots_adjust(wspace=0) 
+fig.subplots_adjust(wspace=0.1) 
+fig.subplots_adjust(hspace=0.25) 
 fig.text(0.5,0.04, "Time (ns)", ha='center', va='center') 
-fig.text(0.08,0.5, r"HBond Length $\AA$", ha='center', va='center',rotation='vertical') 
+fig.text(0.05,0.5, r"HBond Length ($\AA$)", ha='center', va='center',rotation='vertical') 
 
 for index,file in enumerate(datafiles) : 
+    molec = file.split('/')[0]
+    title=molec.split('_')[1]
+    if title[-1] == 'X' : 
+        title = title[:-1]
+        title+='C$_{\\rm{SCN}}$'
+
     data = np.genfromtxt(file,skip_header=23) 
     data[:,0] = data[:,0] / 1000 * 4
 
@@ -49,18 +64,26 @@ for index,file in enumerate(datafiles) :
     ax = axarr[index/figCols,index%figCols]
 
     ax.scatter(data[:,0],data[:,2],s=0.1) 
-    ax.set_title(file.split('/')[0]) 
-    ax.set_xlim([-5,55])
+    ax.set_title(title) 
+    ax.set_xlim([0,50])
+    ax.set_ylim([1.4,2.5])
 
 fig.savefig('figures/Geometries_length.png',format='png') 
 plt.close()
 
 fig, axarr = plt.subplots(figRows,figCols,sharex='col',sharey='row') 
-fig.subplots_adjust(wspace=0) 
+fig.subplots_adjust(wspace=0.1) 
+fig.subplots_adjust(hspace=0.25) 
 fig.text(0.5,0.04, r"HBond Length ($\AA$)", ha='center', va='center') 
-fig.text(0.08,0.5, r"HBond Angle (deg)", ha='center', va='center',rotation='vertical') 
+fig.text(0.05,0.5, r"HBond Angle (deg)", ha='center', va='center',rotation='vertical') 
 
 for index,file in enumerate(datafiles) : 
+    molec = file.split('/')[0]
+    title=molec.split('_')[1]
+    if title[-1] == 'X' : 
+        title = title[:-1]
+        title+='C$_{\\rm{SCN}}$'
+
     data = np.genfromtxt(file,skip_header=23) 
     data[:,0] = data[:,0] / 1000 * 4
 
@@ -71,7 +94,7 @@ for index,file in enumerate(datafiles) :
 
     print file.split('/')[1], "\t", len(data[:,3]) 
     ax.scatter(data[:,2],data[:,3],s=0.05) 
-    ax.set_title(file.split('/')[0]) 
+    ax.set_title(title) 
     ax.set_ylim([90,190])
     ax.set_xlim([1.4,2.5])
     print file.split('/')[1],"\t",len(data[:,3]) 
@@ -80,11 +103,18 @@ fig.savefig('figures/Geometries_2D.png',format='png')
 plt.close() 
 
 fig, axarr = plt.subplots(figRows,figCols,sharex='col',sharey='row') 
-fig.subplots_adjust(wspace=0) 
+fig.subplots_adjust(wspace=0.1) 
+fig.subplots_adjust(hspace=0.25) 
 fig.text(0.5,0.04, r"HBond Length ($\AA$)", ha='center', va='center') 
-fig.text(0.08,0.5, r"HBond Angle (deg)", ha='center', va='center',rotation='vertical') 
+fig.text(0.05,0.5, r"HBond Angle (deg)", ha='center', va='center',rotation='vertical') 
 
 for index,file in enumerate(datafiles) : 
+    molec = file.split('/')[0]
+    title=molec.split('_')[1]
+    if title[-1] == 'X' : 
+        title = title[:-1]
+        title+='C$_{\\rm{SCN}}$'
+
     data = np.genfromtxt(file,skip_header=23) 
     data[:,0] = data[:,0] / 1000 * 4
 
@@ -95,16 +125,12 @@ for index,file in enumerate(datafiles) :
 
     x = data[:,2] ; y = data[:,3]
     counts,  xbins,  ybins  = np.histogram2d(x, y) #,bins=(64,64)) 
-    #extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-
-#    ax.imshow(heatmap) 
-#    plt.close() 
 
     ax.contour(counts.transpose(),extent=[xbins.min(),xbins.max(),
-       ybins.min(),ybins.max()],linewidths=3,colors='black',
+       ybins.min(),ybins.max()],linewidths=2,colors='black',
            linestyles='solid')
 
-    ax.set_title(file.split('/')[0]) 
+    ax.set_title(title) 
     ax.set_ylim([90,190])
     ax.set_xlim([1.4,2.5])
 
@@ -112,11 +138,18 @@ fig.savefig('figures/Geometries_contour.png',format='png')
 plt.close() 
 
 fig, axarr = plt.subplots(figRows,figCols,sharex='col',sharey='row') 
-fig.subplots_adjust(wspace=0) 
+fig.subplots_adjust(wspace=0.1) 
+fig.subplots_adjust(hspace=0.25) 
 fig.text(0.5,0.04, r"HBond Length ($\AA$)", ha='center', va='center') 
-fig.text(0.08,0.5, r"HBond Angle (deg)", ha='center', va='center',rotation='vertical') 
+fig.text(0.05,0.5, r"HBond Angle (deg)", ha='center', va='center',rotation='vertical') 
 
 for index,file in enumerate(datafiles) : 
+    molec = file.split('/')[0]
+    title=molec.split('_')[1]
+    if title[-1] == 'X' : 
+        title = title[:-1]
+        title+='C$_{\\rm{SCN}}$'
+
     data = np.genfromtxt(file,skip_header=23) 
     data[:,0] = data[:,0] / 1000 * 4
 
@@ -133,16 +166,12 @@ for index,file in enumerate(datafiles) :
     ## Overlay contour lines 
     x = data[:,2] ; y = data[:,3]
     counts,  xbins,  ybins  = np.histogram2d(x, y) #,bins=(64,64)) 
-    #extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-
-#    ax.imshow(heatmap) 
-#    plt.close() 
 
     ax.contour(counts.transpose(),extent=[xbins.min(),xbins.max(),
        ybins.min(),ybins.max()],linewidths=1,colors='black',
            linestyles='solid')
 
-    ax.set_title(file.split('/')[0]) 
+    ax.set_title(title) 
     ax.set_ylim([90,190])
     ax.set_xlim([1.4,2.5])
 

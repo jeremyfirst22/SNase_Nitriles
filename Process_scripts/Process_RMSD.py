@@ -5,12 +5,12 @@ import os
 from os import sys
 from matplotlib.colors import LogNorm
 import matplotlib.lines as mlines 
-from matplotlib import rc_file
+#from matplotlib import rc_file
 
 figCols=2
 figRows=3
 
-rcFile='rc_files/paper.rc'
+#rcFile='rc_files/paper.rc'
 
 if not os.path.isdir('figures') : 
     os.mkdir('figures') 
@@ -19,9 +19,9 @@ fig, axarr = plt.subplots(figRows,figCols,sharex='col',sharey='row')
 fig.subplots_adjust(wspace=0.1)  
 fig.subplots_adjust(hspace=0.25) 
 fig.text(0.5,0.04, "Time (ns)", ha='center', va='center') 
-fig.text(0.08,0.5, r"Distance to nearest image ($\rm{\AA}$)", ha='center', va='center',rotation='vertical') 
+fig.text(0.08,0.5, r"RMSD ($\rm{\AA}$)", ha='center', va='center',rotation='vertical') 
 
-rc_file(rcFile) 
+#rc_file(rcFile) 
 
 datafiles = glob.glob('*/rmsd/backbone.xvg') 
 

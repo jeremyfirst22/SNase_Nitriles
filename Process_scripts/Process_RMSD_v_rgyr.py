@@ -6,12 +6,12 @@ from os import sys
 from matplotlib.colors import LogNorm
 import matplotlib.lines as mlines 
 import matplotlib.cm as cm 
-from matplotlib import rc_file
+#from matplotlib import rc_file
 
 figCols=2
 figRows=3
 
-rcFile= 'rc_files/paper.rc' 
+#rcFile= 'rc_files/paper.rc' 
 
 if not os.path.isdir('figures') : 
     os.mkdir('figures') 
@@ -22,7 +22,7 @@ fig.subplots_adjust(hspace=0.25)
 fig.text(0.5,0.04, r"R$_g$ ($\rm{\AA}$)", ha='center', va='center') 
 fig.text(0.05,0.5, r"RMSD ($\rm{\AA}$)", ha='center', va='center',rotation='vertical') 
 
-rc_file(rcFile) 
+#rc_file(rcFile) 
 
 try : 
     binSize = int(sys.argv[1] ) 
