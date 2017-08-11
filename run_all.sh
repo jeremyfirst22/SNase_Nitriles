@@ -1,12 +1,19 @@
 #!/bin/bash
 
+#molecList="
+#SNase_I92X
+#SNase_V66X
+#SNase_L38X
+#SNase_T62X
+#SNase_V23X
+#SNase_WT" 
 molecList="
-SNase_I92X
-SNase_V66X
-SNase_L38X
-SNase_T62X
-SNase_V23X
-SNase_WT" 
+SNase_L25X
+SNase_A58X 
+SNase_A109X
+SNase_V104X
+SNase_N118X
+SNase_A90X"
 
 for molec in $molecList ; do 
     printf "\n\t$molec\n"
