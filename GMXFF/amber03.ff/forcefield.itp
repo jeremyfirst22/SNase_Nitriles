@@ -20,5 +20,6 @@
 #include "ffbonded.itp"
 #include "gbsa.itp"
 #include "CNC.prm" 
+#include "TCHG.prm" 
 
 
