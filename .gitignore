@@ -1,4 +1,7 @@
 SNase_*
 submit_*
 figures/
+data_fitting/
+.DS_Store
+CNC
 
