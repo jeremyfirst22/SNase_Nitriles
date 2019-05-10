@@ -37,16 +37,17 @@ molecList = [
 "A58X"
 ]
 
-absMaxDict = {}
-with open('Exp_data/abs_data2.dat') as f :
-    for line in f :
-        if not line.startswith('#') :
-            key = line.split()[0]
-            absMax, FWHM, error = line.split()[1:4]
-            absMax, FWHM, error = float(absMax), float(FWHM), float(error)
-            absMaxDict[key] = [absMax,FWHM,error]
+absdata = 'Exp_data/abs_data2.dat' 
 
-
+peakDict, fwhmDict = {}, {}
+with open(absdata) as f :
+    for line in f.readlines() :
+        if line.startswith('#') : continue
+        key,peak,peakError,fwhm,fwhmError = line.split()
+        if fwhm == "nan" : continue
+#        value = float(value) * -1
+        fwhmDict[key] = [float(fwhm),float(fwhmError) ]
+        peakDict[key] = [float(peak),float(peakError) ]
 
 rcFile='rc_files/paper.rc'
 rc_file(rcFile) 
@@ -95,6 +96,7 @@ for index,molec in enumerate(molecList) :
     apbsSRFfile = "SNase_%s/APBS_fixed/rxn_field.out"%(molec) 
     apbsData = np.genfromtxt(apbsSRFfile)
     apbsSRF = np.average(apbsData)
+    apbsStdSRF = np.std(apbsData)
 
 
     gmxPCFfile = "SNase_%s/force_calc_ca/SNase_%s.protein_field.projected.xvg"%(molec,molec) 
@@ -105,32 +107,38 @@ for index,molec in enumerate(molecList) :
     apbsPCFfile = "SNase_%s/APBS_fixed/coloumb_field.out"%(molec) 
     apbsData = np.genfromtxt(apbsPCFfile)
     apbsPCF = np.average(apbsData)
+    apbsStdPCF = np.std(apbsData)
 
     gmxEF = gmxSRF + gmxPCF
     apbsEF = apbsSRF + apbsPCF
+    
+    gmxStd = np.sqrt(gmxStdPCF**2 + gmxStdSRF**2) 
+    apbsStd = np.sqrt(apbsStdPCF**2 + apbsStdSRF**2) 
 
-    gmxAx.scatter(absMaxDict[molec][0],gmxEF,color=colorDict[molec],label=molec) 
-    apbsAx.scatter(absMaxDict[molec][0],apbsEF,color=colorDict[molec]) 
+    gmxAx.scatter(peakDict[molec][0],gmxEF,color=colorDict[molec],label=molec) 
+    gmxAx.errorbar(peakDict[molec][0],gmxEF,xerr=peakDict[molec][1],yerr=gmxStd,color=colorDict[molec])
+    apbsAx.scatter(peakDict[molec][0],apbsEF,color=colorDict[molec]) 
+    apbsAx.errorbar(peakDict[molec][0],apbsEF,xerr=peakDict[molec][1],yerr=apbsStd,color=colorDict[molec])
 
     gmxEFs.append(gmxEF)
     apbsEFs.append(apbsEF)
-    absMaxs.append(absMaxDict[molec][0]) 
+    absMaxs.append(peakDict[molec][0]) 
 
     gmxSRFstds.append(gmxStdSRF)
     gmxPCFstds.append(gmxStdPCF)
-    fwhms.append(absMaxDict[molec][1]) 
+    fwhms.append(fwhmDict[molec][0]) 
 
 
 x = np.linspace(np.min(absMaxs),np.max(absMaxs),100) 
 
 slope, intercept, r_value, p_value, std_error = linregress(absMaxs,gmxEFs)
 gmxAx.plot(x,slope*x+intercept,'k--') 
-gmxAx.text(0.05,0.05,"r = %.2f"%r_value,ha='left',va='bottom',transform=gmxAx.transAxes) 
+gmxAx.text(0.05,0.05,"$r$ = %.2f"%r_value,ha='left',va='bottom',transform=gmxAx.transAxes) 
 print slope, intercept
 
 slope, intercept, r_value, p_value, std_error = linregress(absMaxs,apbsEFs)
 apbsAx.plot(x,slope*x+intercept,'k--') 
-apbsAx.text(0.05,0.05,"r = %.2f"%r_value,ha='left',va='bottom',transform=apbsAx.transAxes) 
+apbsAx.text(0.05,0.05,"$r$ = %.2f"%r_value,ha='left',va='bottom',transform=apbsAx.transAxes) 
 print slope, intercept
 
 fig.legend(loc=(0.75,0.35))
@@ -153,19 +161,21 @@ srfAx.text(0.05,0.95,r"\textsf{A}",va='top',ha='left',fontsize=12,transform=gmxA
 pcfAx.text(0.05,0.95,r"\textsf{B}",va='top',ha='left',fontsize=12,transform=apbsAx.transAxes)
 
 for index,molec in enumerate(molecList) :
-    srfAx.scatter(absMaxDict[molec][1],gmxSRFstds[index],color=colorDict[molec],label=molec) 
-    pcfAx.scatter(absMaxDict[molec][1],gmxPCFstds[index],color=colorDict[molec]) 
+    srfAx.scatter(fwhmDict[molec][0],gmxSRFstds[index],color=colorDict[molec],label=molec) 
+    srfAx.errorbar(fwhmDict[molec][0],gmxSRFstds[index],xerr=fwhmDict[molec][1],color=colorDict[molec]) 
+    pcfAx.scatter(fwhmDict[molec][0],gmxPCFstds[index],color=colorDict[molec]) 
+    pcfAx.errorbar(fwhmDict[molec][0],gmxPCFstds[index],xerr=fwhmDict[molec][1],color=colorDict[molec]) 
 
 x = np.linspace(np.min(fwhms),np.max(fwhms),100) 
 
 slope, intercept, r_value, p_value, std_error = linregress(fwhms,gmxSRFstds)
 srfAx.plot(x,slope*x+intercept,'k--') 
-srfAx.text(0.95,0.05,"r = %.2f"%r_value,ha='right',va='bottom',transform=gmxAx.transAxes) 
+srfAx.text(0.95,0.05,"$r$ = %.2f"%r_value,ha='right',va='bottom',transform=gmxAx.transAxes) 
 print slope, intercept
 
 slope, intercept, r_value, p_value, std_error = linregress(fwhms,gmxPCFstds)
 pcfAx.plot(x,slope*x+intercept,'k--') 
-pcfAx.text(0.95,0.05,"r = %.2f"%r_value,ha='right',va='bottom',transform=apbsAx.transAxes) 
+pcfAx.text(0.95,0.05,"$r$ = %.2f"%r_value,ha='right',va='bottom',transform=apbsAx.transAxes) 
 print slope, intercept
 
 fig.legend(loc=(0.75,0.35))

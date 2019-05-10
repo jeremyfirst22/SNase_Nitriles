@@ -51,31 +51,31 @@ if not os.path.isdir('figures') :
 
 datafiles = glob.glob('SNase_*/hbond/geometry.xvg') 
 
-fig = plt.figure(figsize=(6.5,5)) 
+fig = plt.figure(figsize=(3.42,3)) 
 
 xmin,xmax = 1.45, 2.45
 ymin,ymax = 99,180 
 
-left, right = 0.07, 0.90
-bottom, top = 0.08, 0.92
-wspace = 0.3
+left, right = 0.12, 0.88
+bottom, top = 0.12, 0.90
+wspace = 0.40
 
 outer = gridspec.GridSpec(1,2,wspace=wspace,left=left,right=right,bottom=bottom,top=top)
 
-fig.text(left +(right-left-wspace/2)/4+0.01,0.99, r"Hydrogen bonding from solvent",ha='center',va='top') 
-fig.text(right-(right-left-wspace/2)/4-0.01,0.99, r"Hydrogen bonding from protein",ha='center',va='top') 
+fig.text(left +(right-left-wspace/2)/4+0.01,0.99, r"From solvent",ha='center',va='top') 
+fig.text(right-(right-left-wspace/2)/4-0.01,0.99, r"From protein",ha='center',va='top') 
 
 fig.text(left +(right-left-wspace/2)/4,0.01, r"$d_{\rm{NH}}$ ($\rm{\AA}$)",ha='center',va='bottom') 
 fig.text(right-(right-left-wspace/2)/4,0.01, r"$d_{\rm{NH}}$ ($\rm{\AA}$)",ha='center',va='bottom') 
 fig.text(0.01,bottom+(top-bottom)/2         , r"$\theta_1$ (deg)",ha='left',va='center',rotation='vertical') 
-fig.text(0.55-wspace/4,bottom+(top-bottom)/2, r"$\theta_1$ (deg)",ha='left',va='center',rotation='vertical') 
+fig.text(0.555-wspace/4,bottom+(top-bottom)/2, r"$\theta_1$ (deg)",ha='left',va='center',rotation='vertical') 
 
 fig.text(0.01,0.99,r"\textsf{A}",va='top',ha='left',fontsize=12)
 fig.text(0.47,0.99,r"\textsf{B}",va='top',ha='left',fontsize=12)
 
 for subplot in range(2) : 
     #axOuter = fig.add_subplot(outer[subplot]) 
-    inner = gridspec.GridSpecFromSubplotSpec(figRows,figCols,subplot_spec=outer[subplot],wspace=0.1,hspace=0.35) 
+    inner = gridspec.GridSpecFromSubplotSpec(figRows,figCols,subplot_spec=outer[subplot],wspace=0.1,hspace=0.45) 
 
 
     for index,molec in enumerate(molecList) : 
@@ -129,7 +129,7 @@ for subplot in range(2) :
     
 
 #cbar_ax = fig.add_axes([0.90, 0.15, 0.015, 0.7]) 
-cbar_ax = fig.add_axes([(1 - right)/2 + right - 0.02, bottom+(top-bottom-0.7)/2, 0.015, 0.7]) 
+cbar_ax = fig.add_axes([(1 - right)/2 + right - 0.05, bottom+(top-bottom-0.7)/2, 0.015, 0.7]) 
 fig.text(0.99,bottom+(top-bottom-0.7)/2 + 0.7 / 2, r"Counts per bin", ha='right', va='center',rotation='vertical') 
 cbar = fig.colorbar(im, cax=cbar_ax,ticks=range(1,11) ) 
 cbar.set_clim(1,10) 

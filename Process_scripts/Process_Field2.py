@@ -39,15 +39,17 @@ molecList = [
 "A58X"
 ]
 
-absMaxDict = {}  
-with open('Exp_data/abs_data2.dat') as f : 
-    for line in f : 
-        if not line.startswith('#') : 
-            key = line.split()[0] 
-            absMax, FWHM, error = line.split()[1:4] 
-            absMax, FWHM, error = float(absMax), float(FWHM), float(error) 
-            absMaxDict[key] = [absMax,FWHM,error]
+absdata = 'Exp_data/abs_data2.dat'
 
+peakDict, fwhmDict = {}, {}
+with open(absdata) as f :
+    for line in f.readlines() :
+        if line.startswith('#') : continue
+        key,peak,peakError,fwhm,fwhmError = line.split()
+        if fwhm == "nan" : continue
+#        value = float(value) * -1
+        fwhmDict[key] = [float(fwhm),float(fwhmError) ]
+        peakDict[key] = [float(peak),float(peakError) ]
 
 rcFile='rc_files/paper.rc'
 rc_file(rcFile) 
@@ -69,10 +71,10 @@ for field in ['solvent_rxn_field','protein_field'] : #,'external_field'] :
     index=0
     fieldAccum = [] 
     stdAccum = [] 
-    absMaxAccum = [] 
+    peakAccum = [] 
     fwhmAccum = [] 
 
-    left, right = 0.13, 0.95
+    left, right = 0.15, 0.95
     bottom, top = 0.13, 0.98
     wspace, hspace = 0.1, 0.0
 
@@ -174,15 +176,15 @@ for field in ['solvent_rxn_field','protein_field'] : #,'external_field'] :
             pcfStdDict[molec] = stdField
         fieldAccum.append(meanField) 
         stdAccum.append(stdField) 
-        absMaxAccum.append(absMaxDict[molec][0]) 
-        fwhmAccum.append(absMaxDict[molec][1]) 
+        peakAccum.append(peakDict[molec][0]) 
+        fwhmAccum.append(fwhmDict[molec][0]) 
 
 #        ax2.scatter(meanField,absMaxDict[molec][0],color=colorDict[molec]) 
 #        ax4.scatter(stdField,absMaxDict[molec][1],color=colorDict[molec]) 
     
         index +=1
     
-#    slope,intercept,r_value,p_value,std_error = linregress(fieldAccum, absMaxAccum)
+#    slope,intercept,r_value,p_value,std_error = linregress(fieldAccum, peakAccum)
 #    print "r = %f, p = %f"%(r_value,p_value)
 #    xs = np.linspace(np.min(fieldAccum), np.max(fieldAccum),100 )
 #    ys = slope * xs + intercept
@@ -209,55 +211,56 @@ plt.close(fig)
 plt.close(fig2)
 plt.close(fig3)
 
-left, right = 0.10, 0.75
+left, right = 0.15, 0.80
 bottom, top = 0.18, 0.98
 
-fig, ax = plt.subplots(1,1,figsize=(3,2)) 
+fig, ax = plt.subplots(1,1,figsize=(3.42,2.25)) 
 fig.subplots_adjust(left=left,bottom=bottom,right=right,top=top,hspace=hspace,wspace=wspace)
 fig.text((right-left)/2+left,0.03, r"Avg. of PCF + SRF ($\frac{k_BT}{e^- \rm{\AA}}$)", ha='center', va='center') 
 fig.text(0.04,(top-bottom)/2+bottom, r"$\nu$ (cm$^{-1}$)", ha='center', va='center',rotation='vertical') 
 ax.invert_xaxis() 
 
-fig2, ax2= plt.subplots(1,1,figsize=(3.25,2)) 
+fig2, ax2= plt.subplots(1,1,figsize=(3.42,2.25)) 
 fig2.subplots_adjust(left=left,bottom=bottom,right=right,top=top,hspace=hspace,wspace=wspace)
 fig2.text((right-left)/2+left,0.01, r"$(\sigma_{\text{SRF}}^2 + \sigma_{\text{PCF}}^2)^{\frac{1}{2}} \left ( \frac{k_BT}{e^- \rm{\AA}} \right ) $", ha='center', va='bottom') 
 fig2.text(0.01,(top-bottom)/2+bottom, r"FWHM (cm$^{-1}$)", ha='left', va='center',rotation='vertical') 
 
 srfAccum, pcfAccum, freqAccum = [], [],[] 
-fwhmAccum,errAccum = [],[]
+fwhmAccum,stdAccum = [],[]
 #for fudgeFactor in np.linspace(0.0,1.50,11) : 
 for fudgeFactor in [1.00] : 
     for molec in srfDict : 
         #print molec, srfDict[molec], pcfDict[molec] 
     
-        err = np.sqrt(srfStdDict[molec]**2 + fudgeFactor*(pcfStdDict[molec])**2)
-        ax.scatter(srfDict[molec]+pcfDict[molec]*fudgeFactor,absMaxDict[molec][0],color=colorDict[molec]) 
+        std = np.sqrt(srfStdDict[molec]**2 + fudgeFactor*(pcfStdDict[molec])**2)
+        ax.scatter(srfDict[molec]+pcfDict[molec]*fudgeFactor,peakDict[molec][0],color=colorDict[molec]) 
 #        ax.errorbar(srfDict[molec]+pcfDict[molec]*fudgeFactor,absMaxDict[molec][0],yerr=absMaxDict[molec][2],xerr=err,color=colorDict[molec],capsize=2) 
         #ax.scatter(srfDict[molec],absMaxDict[molec][0],color=colorDict[molec],alpha=0.25,s=5.0) 
     
-        ax2.scatter(err,absMaxDict[molec][1],color=colorDict[molec],label=molec) 
+        ax2.scatter(std,fwhmDict[molec][0],color=colorDict[molec],label=molec) 
+        ax2.errorbar(std,fwhmDict[molec][0],yerr=fwhmDict[molec][1],color=colorDict[molec])
     
         srfAccum.append(srfDict[molec]) 
         pcfAccum.append(pcfDict[molec]) 
-        freqAccum.append(absMaxDict[molec][0]) 
-        fwhmAccum.append(absMaxDict[molec][1]) 
-        errAccum.append(err) 
+        freqAccum.append(peakDict[molec][0]) 
+        fwhmAccum.append(fwhmDict[molec][0]) 
+        stdAccum.append(std) 
     
 xs = np.array(srfAccum) + np.array(pcfAccum)*fudgeFactor
 slope, intercept, r_value, p_value, std_error = linregress(xs,freqAccum) 
 xs = np.linspace(np.min(xs),np.max(xs),100) 
 print "%0.2f\t%0.3f"%(fudgeFactor,r_value)
 ax.plot(xs,slope*xs+intercept,'k--',) 
-ax.text(0.1,0.9,"r = %0.2f"%r_value,transform=ax.transAxes,ha='left',va='top')
+ax.text(0.1,0.9,"$r$ = %0.2f"%r_value,transform=ax.transAxes,ha='left',va='top')
 
-slope, intercept, r_value, p_value, std_error = linregress(errAccum,fwhmAccum) 
-xs = np.linspace(np.min(errAccum),np.max(errAccum),100) 
+slope, intercept, r_value, p_value, std_error = linregress(stdAccum,fwhmAccum) 
+xs = np.linspace(np.min(stdAccum),np.max(stdAccum),100) 
 print "FWHM: \t%0.3f"%(r_value)
 ax2.plot(xs,slope*xs+intercept,'k--') 
-ax2.text(0.05,0.95,"r = %0.2f"%r_value,transform=ax2.transAxes,ha='left',va='top')
+ax2.text(0.05,0.95,"$r$ = %0.2f"%r_value,transform=ax2.transAxes,ha='left',va='top')
 #fig2.text(0.96,0.27,r"$F_{SCF}+$%1.2f$\cdot F_{PCF}$"%(fudgeFactor),ha='right',va='center') 
 #ax2.legend(loc=4)
-ax2.legend(loc=(1.00,0.08))
+ax2.legend(loc=(0.97,0.12))
 
 fig.savefig('figures/pcf+srf_vs_peak.png',format='png',dpi=500) 
 fig2.savefig('figures/fwhm_vs_std.png',dpi=500) 

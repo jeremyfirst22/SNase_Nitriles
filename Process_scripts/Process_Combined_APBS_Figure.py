@@ -87,7 +87,7 @@ for index,molec in enumerate(molecList) :
            axTime.tick_params(axis="x",labelbottom=False)
     if index/figRows + 1 == figCols :
            axTime.tick_params(axis="y",labelleft=False)
-    axTime.set_ylim([-16,14]) 
+    axTime.set_ylim([10,-20]) 
 
 
     #continue 
@@ -106,24 +106,30 @@ for index,molec in enumerate(molecList) :
     axTime.scatter(time,data,s=0.5,color=colorDict[molec],marker='.')  
 
     meanField = np.average(data)
+    stdField = np.std(data)
 
     gmxSRFfile = "SNase_%s/force_calc_ca/SNase_%s.solvent_rxn_field.projected.xvg"%(molec,molec) 
     gmxData = np.genfromtxt(gmxSRFfile)
     gmxSRF = np.average(gmxData)
+    gmxSRFstd = np.std(gmxData)
 
     axSRF.scatter(gmxSRF, meanField, color=colorDict[molec],zorder=index,label=molec)
+    axSRF.errorbar(gmxSRF, meanField, xerr=gmxSRFstd, yerr=stdField, color=colorDict[molec],zorder=index) 
     gmxSRFs.append(gmxSRF) 
     apbsSRFs.append(meanField) 
 
     gmxPCFfile = "SNase_%s/force_calc_ca/SNase_%s.protein_field.projected.xvg"%(molec,molec) 
     gmxData = np.genfromtxt(gmxPCFfile)
     gmxPCF = np.average(gmxData)
+    gmxPCFstd = np.std(gmxData)
 
     apbsPCFfile = "SNase_%s/APBS_fixed/coloumb_field.out"%(molec) 
     apbsData = np.genfromtxt(apbsPCFfile)
     apbsPCF = np.average(apbsData)
+    apbsPCFstd = np.std(apbsData) 
 
     axPCF.scatter(gmxPCF, apbsPCF,color=colorDict[molec],zorder=index,label=molec)
+    axPCF.errorbar(gmxPCF, apbsPCF, xerr=gmxPCFstd, yerr=apbsPCFstd, color=colorDict[molec],zorder=index) 
     gmxPCFs.append(gmxPCF) 
     apbsPCFs.append(apbsPCF) 
 
@@ -131,14 +137,14 @@ slope, intercept, r_value, p_value, std_error = linregress(gmxSRFs,apbsSRFs)
 x = np.linspace(np.min(gmxSRFs),np.max(gmxSRFs),100) 
 axSRF.plot(x,slope*x+intercept,'k--') 
 #axSRF.plot(x,x,'b--') 
-axSRF.text(0.05,0.95,"r = %.2f"%r_value,ha='left',va='top',transform=axSRF.transAxes) 
+axSRF.text(0.05,0.95,"$r$ = %.2f"%r_value,ha='left',va='top',transform=axSRF.transAxes) 
 print slope, intercept
 
 slope, intercept, r_value, p_value, std_error = linregress(gmxPCFs,apbsPCFs)
 x = np.linspace(np.min(gmxPCFs),np.max(gmxPCFs),100) 
 axPCF.plot(x,slope*x+intercept,'k--') 
 #axPCF.plot(x,x,'b--') 
-axPCF.text(0.05,0.95,"r = %.2f"%r_value,ha='left',va='top',transform=axPCF.transAxes) 
+axPCF.text(0.05,0.95,"$r$ = %.2f"%r_value,ha='left',va='top',transform=axPCF.transAxes) 
 print slope, intercept
 
 fig.savefig('figures/combined_APBS_figure.png',format='png') 

@@ -52,27 +52,27 @@ simTime =100 ##ns
 srfDict, pcfDict = {}, {} 
 srfStdDict, pcfStdDict = {}, {} 
 
-fig = plt.figure(figsize=(6.5,8))
+fig = plt.figure(figsize=(7.0,5))
 
-left, right    = 0.08, 0.95 
-bottom, top    = 0.06, 0.97 
-hspace, wspace = 0.15, 0.20
+left, right    = 0.07, 0.98 
+bottom, top    = 0.08, 0.97 
+hspace, wspace = 0.25, 0.10
 
 plotArray = gridspec.GridSpec(2,2,wspace=wspace,hspace=hspace,left=left,right=right,bottom=bottom,top=top)
 
 fig.text(0.01,top-(top-bottom-hspace/2)/4   , r"SRF $(\frac{k_B T}{e^{-}\AA})$",ha='left',va='center',rotation='vertical')
 fig.text(0.01,bottom+(top-bottom-hspace/2)/4, r"PCF $(\frac{k_B T}{e^{-}\AA})$",ha='left',va='center',rotation='vertical')
-fig.text(0.53,top-(top-bottom-hspace/2)/4   , r"Probability (a.u.)             ",ha='left',va='center',rotation='vertical')
-fig.text(0.53,bottom+(top-bottom-hspace/2)/4, r"Probability (a.u.)            ",ha='left',va='center',rotation='vertical')
+fig.text(0.52,top-(top-bottom-hspace/2)/4   , r"Probability (a.u.)             ",ha='left',va='center',rotation='vertical')
+fig.text(0.52,bottom+(top-bottom-hspace/2)/4, r"Probability (a.u.)            ",ha='left',va='center',rotation='vertical')
 
 fig.text(right-(right-left-wspace/2)/4,0.50 , r"SRF $(\frac{k_B T}{e^{-}\AA})$",ha='center',va='bottom')
 fig.text(right-(right-left-wspace/2)/4,0.01 , r"PCF $(\frac{k_B T}{e^{-}\AA})$",ha='center',va='bottom')
 fig.text(left +(right-left-wspace/2)/4,0.015, r"Time (ns)                     ",ha='center',va='bottom')
 fig.text(left +(right-left-wspace/2)/4,0.505, r"Time (ns)                     ",ha='center',va='bottom') 
 
-fig.text(0.01,0.98,r"\textsf{A}",va='top',ha='left',fontsize=12)
+fig.text(0.005,0.98,r"\textsf{A}",va='top',ha='left',fontsize=12)
 fig.text(0.52,0.98,r"\textsf{B}",va='top',ha='left',fontsize=12)
-fig.text(0.01,0.49,r"\textsf{C}",va='top',ha='left',fontsize=12)
+fig.text(0.005,0.49,r"\textsf{C}",va='top',ha='left',fontsize=12)
 fig.text(0.52,0.49,r"\textsf{D}",va='top',ha='left',fontsize=12)
 
 for plotRow,field in enumerate(['solvent_rxn_field','protein_field']) : 

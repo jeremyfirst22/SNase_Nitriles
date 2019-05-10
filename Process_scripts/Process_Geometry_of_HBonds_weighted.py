@@ -11,6 +11,7 @@ from matplotlib.lines import Line2D
 from sys import exit
 
 rcFile = 'rc_files/paper.rc'  
+absdata = 'Exp_data/abs_data2.dat' 
 
 colorDict = {
         "V23X":'chartreuse',
@@ -63,14 +64,15 @@ f2.text(0.01,bottom+(top-bottom)/2, r"$\tilde{\nu}$ (cm$^{-1}$)", ha='left', va=
 
 r = 2.45 
 
-absMax = {} 
-with open('Exp_data/sasa_abs_data.dat') as f : 
-    for line in f : 
-        if not line.startswith('#') : 
-            key = line.split()[0] 
-            value = float(line.split()[2]) 
-            absMax[key] = value 
-
+peakDict, fwhmDict = {}, {}
+with open(absdata) as f : 
+    for line in f.readlines() :
+        if line.startswith('#') : continue
+        key,peak,peakError,fwhm,fwhmError = line.split()
+        if fwhm == "nan" : continue
+#        value = float(value) * -1
+        fwhmDict[key] = [float(fwhm),float(fwhmError) ]
+        peakDict[key] = [float(peak),float(peakError) ]
 
 accumAvgTheta = [] 
 accumAbsMax = [] 
@@ -195,9 +197,9 @@ for index, molec in enumerate(molecList) :
     #if not molec == "A90X" : 
     if True : #numHBonds > 1500 : 
         try : 
-            ax2.scatter(avgAngleTot,absMax[molec], marker='o',color=colorDict[molec],edgecolor='none',s=numHBonds/50,zorder=10) 
-            #ax2.scatter(absMax[molec],avgAngleTot, marker='o',label=molec,color=colorDict[molec],edgecolor='none',s=numHBonds/50,zorder=10)  
-            accumAbsMax.append(absMax[molec]) 
+            ax2.scatter(avgAngleTot,peakDict[molec][0], marker='o',color=colorDict[molec],edgecolor='none',s=numHBonds/50,zorder=10) 
+            #ax2.scatter(peakDict[molec],avgAngleTot, marker='o',label=molec,color=colorDict[molec],edgecolor='none',s=numHBonds/50,zorder=10)  
+            accumAbsMax.append(peakDict[molec][0]) 
             accumAvgTheta.append(avgAngleTot) 
             accumNumHBonds.append(numHBonds)
             print molec, avgAngleTot
@@ -207,8 +209,8 @@ for index, molec in enumerate(molecList) :
             print "No key found for %s"%molec
             continue 
     else : 
-            ax2.scatter(avgAngleTot,absMax[molec], marker='o',label=molec,color=colorDict[molec],edgecolor='none',s=numHBonds/50,zorder=10,alpha=0.25)  
-            #ax2.scatter(absMax[molec],avgAngleTot, marker='o',label=molec,color=colorDict[molec],edgecolor='none',s=numHBonds/50,zorder=10,alpha=0.25)  
+            ax2.scatter(avgAngleTot,peakDict[molec][0], marker='o',label=molec,color=colorDict[molec],edgecolor='none',s=numHBonds/50,zorder=10,alpha=0.25)  
+            #ax2.scatter(peakDict[molec],avgAngleTot, marker='o',label=molec,color=colorDict[molec],edgecolor='none',s=numHBonds/50,zorder=10,alpha=0.25)  
 
 
     #ax2.axhline(2227.5,color='k',linestyle='--') 
@@ -261,7 +263,7 @@ xs = np.linspace(min(x), max(x) )
 ys = slope * xs + intercept
 ax2.plot(xs, ys, color='k')
 
-ax2.text(0.05,0.90,r"r = %0.3f"%r_value,transform=ax2.transAxes) 
+ax2.text(0.05,0.90,r"$r$ = %0.2f"%r_value,transform=ax2.transAxes) 
 ax2.legend(handles=legend,loc=(0.95,0.10)) 
 
 f2.savefig('figures/weighted_abs_max_vs_max_theta.png',format='png') 
