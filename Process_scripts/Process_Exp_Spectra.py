@@ -40,12 +40,12 @@ molecList = [
 "A109X",
 "T62X",
 "V23X",
-"DMSO",
 "L25X",
 "L38X",
 "I92X",
 "N118X",
 "A58X",
+"DMSO",
 "Water"
 ]
 
@@ -77,18 +77,16 @@ rc_file(rcFile)
 if not os.path.isdir('figures') : 
     os.mkdir('figures') 
 
-figRows,figCols = 6,2
-simTime =100 ##ns
+figRows,figCols = 11,1
 
 srfDict, pcfDict = {}, {} 
 srfStdDict, pcfStdDict = {}, {} 
 
-
-left, right = 0.08, 0.99 
-bottom, top = 0.11, 0.99 
+left, right = 0.08, 0.95 
+bottom, top = 0.08, 0.98 
 wspace, hspace = 0.05, 0.0 
 
-fig, axarr = plt.subplots(figRows,figCols,sharex='all',sharey='all',figsize=(3.25,3) )
+fig, axarr = plt.subplots(figRows,figCols,sharex='all',sharey='all',figsize=(2.50,5.5) )
 fig.subplots_adjust(left=left,bottom=bottom,right=right,top=top,hspace=hspace,wspace=wspace)
 fig.text(left+(right-left)/2,0.03, r"Wavenumbers (cm$^{-1}$)" , ha='center', va='center') 
 fig.text(0.05,bottom+(top-bottom)/2, r"Normalized absorbance (a.u.)", ha='center', va='center',rotation='vertical') 
@@ -96,32 +94,94 @@ fig.text(0.05,bottom+(top-bottom)/2, r"Normalized absorbance (a.u.)", ha='center
 equilTime= 00 
 forceDir = "force_calc"
 f = open('Exp_data/abs_data2.dat','w') 
-f.write("#Construct Abs Max  STD   \n") 
+f.write("#Construct Mean freq. std  FWHM  std\n") 
 for index,molec in enumerate(molecList) :
-    ax = axarr[index%figRows,index/figRows]
-    ax.text(0.02,0.88,"%s"%molec,va='top',ha='left',color=colorDict[molec],transform=ax.transAxes)
+    if molec == "Water" : index -= 1  ##Water on same row as DMSO
+
+    #ax = axarr[index%figRows,index/figRows]
+    ax = axarr[index]
+    if molec != "Water" : 
+        ax.text(0.02,0.88,"%s"%molec,va='top',ha='left',color=colorDict[molec],transform=ax.transAxes)
+    else : 
+        ax.text(0.98,0.88,"%s"%molec,va='top',ha='right',color=colorDict[molec],transform=ax.transAxes)
     ######
     ###   Read in experimental spectra 
     ######
-    expFile = 'Exp_data/%s.dat'%molec
-    if not os.path.isfile(expFile) : 
-        print "Experimental spectra not found for %s"%molec
+    num = molec[1:-1]
+    if molec == "Water" : num = "Water" 
+    if molec == "DMSO" : num = "DMSO" 
+    expFiles = glob.glob('Exp_data/SNase_final_steadystate_ir_replicates/%s/*.out'%num) 
+
+    if not expFiles : 
+        print "No exp files found for %s" %molec
         continue 
-    expData = np.genfromtxt(expFile) 
+
+    peaks, fwhms, expData = [], [], [] 
+    print "\t",
+    for expFile in expFiles : 
+        ##For some reason, the last run of DMSO was run with 1/2 the resolution. 
+        ##  This is making sure the other two runs have the same x-axis as the last one. 
+        ##  Also A58X run 1 
+        if (molec == "DMSO" and expFile.split('_')[-1][0] in ['4','3']) or \
+            (molec == "A58X" and expFile.split('_')[-1][0] in ['1']) : 
+            temp = np.genfromtxt(expFile)
+            temp = temp[1::2]
+            expData.append(temp) 
+        else : 
+            expData.append(np.genfromtxt(expFile) )
+
+        with open(expFile) as fIn : 
+            for line in fIn.readlines() : 
+                if line.startswith("#") : 
+                    #if line.startswith("# Mean vibrational frequency:") : 
+                    #    peaks.append(line.split()[4]) 
+                    if line.startswith("# Frequency of max absorbance:") : 
+                        peaks.append(line.split()[5]) 
+                        print "%8.3f  "%(float(line.split()[5])), 
+                    if line.startswith("# FWHM:") : 
+                        fwhms.append( line.split()[2]) 
+                else : break 
+    print "\n",
+
+
+    ######
+    ###   Calculate average spectrum from all experimental spectra
+    ######
+    xs = expData[0][:,0]
+    avgData = np.zeros_like(xs) 
+    for data in expData : 
+        assert data[:,0].all() == xs.all() 
+        assert len(data[:,1]) == len(xs) 
+        avgData += data[:,1]
+        ax.plot(data[:,0], data[:,1],'k-',linewidth=0.5) 
+    avgData /= len(expData) 
+
+    outFile = "Exp_data/%s.dat"%(molec) 
+    np.savetxt(outFile, np.array([xs,avgData]).T, fmt='%8.3f')  
+
+    avgPeak = np.average(np.array(peaks,dtype=float) ) 
+    stdPeak = np.std(np.array(peaks    ,dtype=float) ) 
+
+    avgFwhm = np.average(np.array(fwhms,dtype=float) ) 
+    stdFwhm = np.std(np.array(fwhms    ,dtype=float) ) 
 
     ######
     ###   Calculate standard deviation and mean frequency
     ######
-    avg, std = weighted_avg_and_std(expData[:,0],expData[:,1]) 
-    print "%6s\t%4.2f\t%2.3f"%(molec, avg, std)
-    f.write("%6s\t%4.2f\t%2.3f\t0.0000\n"%(molec, avg, std)) 
+    #avg, std = weighted_avg_and_std(expData[:,0],expData[:,1]) 
+    print("%-6s %8.3f %8.3f %8.3f %8.3f\n"%(molec, avgPeak, stdPeak, avgFwhm, stdFwhm)), 
+    f.write("%-6s %8.3f %8.3f %8.3f %8.3f\n"%(molec, avgPeak, stdPeak, avgFwhm, stdFwhm)) 
 
 
     ######
     ###   Plot experimental spectra    
     ######
-    ax.plot(expData[:,0],expData[:,1],color=colorDict[molec],linestyle='-')
-    ax.axvline(absMaxDict[molec][0],linestyle='--',color=colorDict[molec]) 
+    #ax.plot(expData[:,0],expData[:,1],color=colorDict[molec],linestyle='-')
+    #ax.axvline(absMaxDict[molec][0],linestyle='--',color=colorDict[molec]) 
+
+    ax.plot(xs,avgData,color=colorDict[molec],linestyle='-')
+    ax.axvline(avgPeak ,linestyle='--',color=colorDict[molec]) 
+    #ax.axvline(xs[np.argmax(avgData)],linestyle='--',color=colorDict[molec]) 
 
     ######
     ###   Set plot parameters

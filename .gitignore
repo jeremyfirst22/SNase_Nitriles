@@ -4,4 +4,7 @@ figures/
 data_fitting/
 .DS_Store
 CNC
+Exp_data/*X.dat
+Exp_data/Water.dat
+Exp_data/DMSO.dat
 
