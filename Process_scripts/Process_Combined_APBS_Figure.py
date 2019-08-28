@@ -64,12 +64,12 @@ srfArray  = gridspec.GridSpecFromSubplotSpec(figRows,figCols,subplot_spec=plotAr
 axSRF = plt.subplot(plotArray[0,1])
 axPCF = plt.subplot(plotArray[1,1])
 
-fig.text(0.01,top-(top-bottom/2)/2, r"SRF calculated with RF method in APBS $(\frac{k_B T}{e^{-}\AA})$",ha='left',va='center',rotation    ='vertical')
+fig.text(0.01,top-(top-bottom/2)/2, r"SRF calculated with RFM in APBS $(\frac{k_B T}{e^{-}\AA})$",ha='left',va='center',rotation    ='vertical')
 fig.text(left +(right-left-wspace/2)/4 ,0.01, r"Time (ns)",ha='center',va='bottom')
 fig.text(right-(right-left-wspace/2)/4 ,0.01, r"PCF -- MD force field $(\frac{k_B T}{e^{-}\AA})$",ha='center',va='bottom')
 fig.text(right-(right-left-wspace/2)/4 ,0.51, r"SRF -- MD force field $(\frac{k_B T}{e^{-}\AA})$",ha='center',va='bottom')
-fig.text(0.51,   top-(top-bottom-hspace/2)/4, r"SRF -- APBS $(\frac{k_B T}{e^{-}\AA})$",ha='left',va='center',rotation='vertical')
-fig.text(0.51,bottom+(top-bottom-hspace/2)/4, r"PCF -- APBS $(\frac{k_B T}{e^{-}\AA})$",ha='left',va='center',rotation='vertical')
+fig.text(0.51,   top-(top-bottom-hspace/2)/4, r"SRF -- RFM $(\frac{k_B T}{e^{-}\AA})$",ha='left',va='center',rotation='vertical')
+fig.text(0.51,bottom+(top-bottom-hspace/2)/4, r"PCF -- RFM $(\frac{k_B T}{e^{-}\AA})$",ha='left',va='center',rotation='vertical')
 
 fig.text(0.01,0.98,r"\textsf{A}",va='top',ha='left',fontsize=12)
 fig.text(0.49,0.98,r"\textsf{B}",va='top',ha='left',fontsize=12)

@@ -12,31 +12,33 @@ figCols=1
 figRows=1
 
 nameToColorKeys = {
-        "V23X":'#007F00',
-        "L25X":'#4DBEEE',
-        "L38X":'#142B8C',
-        "A58X":'#BF00BF',
-        "T62X":'#77AB30',
-        "V66X":'#D95219',
-        "A90X":'#A2142F',
-        "I92X":'#6666FF',
-        "A109X":'#ECB120',
-        "V104X":'k',
-        "N118X":'#7E2F8E'
-        }
+        "V23X":'chartreuse',
+        "L25X":'g',
+        "L38X":'c',
+        "A58X":'m',
+        "T62X":'gold',
+        "V66X":'r',
+        "A90X":'darkred',
+        "I92X":'b',
+        "A109X":'darkorange',
+        "N118X":'indigo',
+        "DMSO": 'k',
+        "Water": 'grey'
+}
+
 molecList = [
+"A90X",
+"V66X",
+"A109X",
+"T62X",
 "V23X",
 "L25X",
 "L38X",
-"A58X",
-"T62X",
-"V66X",
-"A90X",
 "I92X",
-"A109X",
-#"V104X",
-#"N118X"   
+"N118X",
+"A58X"
 ]
+
 
 absMax = {}  
 with open('Exp_data/sasa_abs_data.dat') as f : 
@@ -53,7 +55,7 @@ rc_file(rcFile)
 if not os.path.isdir('figures') : 
     os.mkdir('figures') 
 
-figRows,figCols = 4,3
+figRows,figCols = 5,2
 simTime =100 ##ns
 
 #field = 'solvent_rxn_field'
@@ -73,14 +75,16 @@ for field in ['total_field','external_field','solvent_rxn_field','protein_field'
     fig2.text(0.5,0.02, "Shift due to Field (cm$^{-1}$)",ha='center', va='center') 
     fig2.text(0.06,0.5, r"$\tilde{\nu}$ (cm$^{-1}$)", ha='center', va='center',rotation='vertical')
 
-    fig3, axarr = plt.subplots(figRows,figCols,sharex='col',sharey='row' )
-    fig3.subplots_adjust(wspace=0.10,hspace=0.35,left=0.12,right=0.98,top=0.93,bottom=0.1)
+    fig3, axarr = plt.subplots(figRows,figCols,sharex='col',sharey='row',figsize=(3.25,4 ))
+    fig3.subplots_adjust(wspace=0.10,hspace=0.00,left=0.18,right=0.98,top=0.93,bottom=0.1)
     fig3.text(0.5,0.02, "Time (ns)",ha='center', va='center') 
-    fig3.text(0.06,0.5, r"Shift due to field (cm$^{-1}$)", ha='center', va='center',rotation='vertical')
+    fig3.text(0.06,0.5, r"SRF calculated with MD ff ($\frac{k_B T}{e^- \AA}$)", ha='center', va='center',rotation='vertical')
 
 
     for index,molec in enumerate(molecList) :
-        ax3 = axarr[index/figCols,index%figCols]
+        ax3 = axarr[index%figRows,index/figRows]
+        ax3.text(0.96,0.93,"%s"%molec,va='top',ha='right' \
+                ,color=nameToColorKeys[molec],transform=ax3.transAxes)
 
         datafile = "SNase_%s/force_calc/%s.out"%(molec,field) 
         datafile2= "SNase_%s/force_calc/%s.poly"%(molec,field)
@@ -97,16 +101,16 @@ for field in ['total_field','external_field','solvent_rxn_field','protein_field'
     
         #meanField = data2[np.argmax(data2[:,1]),0]
         meanField = np.average(timeData) 
-        meanField *= 2.57 ##kbT/eA -> MV/cm
-        meanField *= -0.67 ## MV/cm -> cm^-1
+        #meanField *= 2.57 ##kbT/eA -> MV/cm
+        #meanField *= -0.67 ## MV/cm -> cm^-1
 
-        data[:,0] *= (2.57 * -0.67) 
-        data2[:,0] *= (2.57 * -0.67) 
-        timeData *= (2.57 * -0.67)
+        #data[:,0] *= (2.57 * -0.67) 
+        #data2[:,0] *= (2.57 * -0.67) 
+        #timeData *= (2.57 * -0.67)
 
         time = np.linspace(0,simTime,len(timeData) ) 
         ax3.scatter(time,timeData,s=0.05,color=nameToColorKeys[molec],marker='.')  
-        ax3.set_title(molec,color=nameToColorKeys[molec]) 
+        #ax3.set_title(molec,color=nameToColorKeys[molec]) 
 
         max = np.max(data2[:,1])
     #    data[:,1] /= max
@@ -123,6 +127,8 @@ for field in ['total_field','external_field','solvent_rxn_field','protein_field'
             pcfDict[molec] = meanField 
 
         ax2.scatter(meanField,absMax[molec],color=nameToColorKeys[molec] ) 
+
+        ax3.set_ylim(25,-60)
     
         fieldAccum.append(meanField) 
         absMaxAccum.append(absMax[molec]) 

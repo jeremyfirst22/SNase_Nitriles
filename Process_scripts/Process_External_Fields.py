@@ -76,7 +76,7 @@ gmxAx = plt.subplot(plotArray[0])
 apbsAx = plt.subplot(plotArray[1])
 
 fig.text(0.02,top-(top-bottom-hspace/2)/4, r"$\langle F \rangle$ -- MD force field $(\frac{k_B T}{e^{-}\AA})$",ha='left',va='center',rotation    ='vertical')
-fig.text(0.02,bottom+(top-bottom-hspace/2)/4, r"$\langle F \rangle$ -- APBS $(\frac{k_B T}{e^{-}\AA})$",ha='left',va='center',rotation    ='vertical')
+fig.text(0.02,bottom+(top-bottom-hspace/2)/4, r"$\langle F \rangle$ -- RFM $(\frac{k_B T}{e^{-}\AA})$",ha='left',va='center',rotation    ='vertical')
 fig.text(left +(right-left)/2 ,0.01, r"$\tilde{\nu}$ (cm$^{-1}$)",ha='center',va='bottom')
 fig.text(left +(right-left)/2 ,0.51, r"$\tilde{\nu}$ (cm$^{-1}$)",ha='center',va='bottom')
 

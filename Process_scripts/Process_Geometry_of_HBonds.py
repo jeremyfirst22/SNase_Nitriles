@@ -159,7 +159,7 @@ f2.text(0.06,0.5, r"$\tilde{\nu}$ (cm$^{-1}$)", ha='center', va='center',rotatio
 r = 2.45 
 
 absMax = {} 
-with open('Exp_data/abs_data.dat') as f : 
+with open('Exp_data/abs_data2.dat') as f : 
     for line in f : 
         if not line.startswith('#') : 
             key = line.split()[0] 
@@ -281,7 +281,7 @@ for index, molec in enumerate(molecList) :
     ax = axarr[index/figCols,index%figCols]
     #axD = axarrDens[index/figCols,index%figCols]
 
-    if not molec == "A90X" and not molec == "V66X" : 
+    if True  : #not molec == "A90X" and not molec == "V66X" : 
         try : 
             ax2.scatter(avgAngleTot,absMax[molec], marker='P',label=molec,color=colorDict[molec],edgecolor='none',s=100,zorder=10)  
             accumAbsMax.append(absMax[molec]) 

@@ -4,8 +4,8 @@ from scipy.stats import linregress
 import os
 from matplotlib import rc_file 
 
-ftlsdata = 'Exp_data/ftls.dat'
-absdata = 'Exp_data/abs_data.dat'
+ftlsdata = 'Exp_data/ftls_fits.dat'
+absdata = 'Exp_data/abs_data2.dat'
 
 rcFile='rc_files/paper.rc'
 rc_file(rcFile)
@@ -39,23 +39,22 @@ molecList = [
 ]
 
 ftlsDict = {}
-with open(ftlsdata) as f : 
-    for line in f.readlines() : 
+with open(ftlsdata) as f :
+    for line in f.readlines() :
         key,value, error = line.split()
-        if value == "nan" : continue 
-#        value = float(value) * -1 
-        ftlsDict[key] = [float(value), float(error)] 
+        if value == "nan" : continue
+#        value = float(value) * -1
+        ftlsDict[key] = [float(value), float(error)]
 
-fwhmDict = {}
-with open(absdata) as f : 
-    for line in f.readlines() : 
-        if line.startswith('#') : continue 
-        key,peak,fwhm,peakError = line.split()
-        if fwhm == "nan" : continue 
-#        value = float(value) * -1 
-        fwhmDict[key] = float(fwhm)
-
-
+peakDict, fwhmDict = {}, {}
+with open(absdata) as f :
+    for line in f.readlines() :
+        if line.startswith('#') : continue
+        key,peak,peakError,fwhm,fwhmError = line.split()
+        if fwhm == "nan" : continue
+#        value = float(value) * -1
+        fwhmDict[key] = [float(fwhm),float(fwhmError) ]
+        peakDict[key] = [float(peak),float(peakError) ]
 
 left, right = 0.18, 0.75
 bottom, top = 0.15, 0.95
@@ -68,7 +67,7 @@ fig.text(0.01,(top-bottom)/2+bottom,         r"FTLS (cm$^{-1}$ $^{\circ}$C$^{-1}
 ftlsAccum, fwhmAccum = [],[]
 for index,molec in enumerate(molecList) : 
     ftls, error = ftlsDict[molec]
-    fwhm = fwhmDict[molec]
+    fwhm,fwhmError = fwhmDict[molec]
     
     ax.scatter(fwhm,ftls,color=colorDict[molec],zorder=index,label=molec) 
     ax.errorbar(fwhm,ftls,yerr=error,color=colorDict[molec],zorder=index) 
